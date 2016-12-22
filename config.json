@@ -1,0 +1,71 @@
+{
+	"depart": 
+	{
+		"monde": "Monde1",
+		"ecran": "Ecran1",
+		"pt": 
+		{
+			"x": 395,
+			"y": 290
+		}
+	},
+	"taille": 
+	{
+		"w": 40, 
+		"h": 30
+	}, 
+	"vitesse": 
+	{
+		"chute": 4, 
+		"saut": 8, 
+		"deplacement": 3
+	},
+	"recovery": 
+	{
+		"jump": 20,
+		"wait_jump": 10,
+		"shift": 60,
+		"switch": 60
+	},
+	"item": 
+	{
+		"type": 
+		[
+			"plateforme", 
+			"loot", 
+			"decor"
+		],
+		"proprietes": 
+		{
+			"plateforme": 
+			{
+				"mouvement": {"representation": true}, 
+				"disparition": {"representation": false}, 
+				"animation": {"representation": true}
+			},
+			"loot": 
+			{
+				"effet": {"representation": false, "activation": ["instant", "delayed", "triggered"]}, 
+				"ramassable": {"representation": false}, 
+				"utilisable": {"representation": false}
+			},
+			"decor": 
+			{
+				"defilement": {"representation": false}, 
+				"disparition": {"representation": false}, 
+				"animation": {"representation": false}
+			}
+		}
+	},
+	"palette": 
+	{
+		"noir": ["#000000", "#111111", "#222222", "#333333", "#444444"], 
+		"gris": ["#969696", "#AFAFAF", "#C8C8C8", "#E1E1E1", "#FAFAFA"], 
+		"bleu":["#0000FF", "#3232FF", "#6464FF", "#000096", "#000064"], 
+		"cyan": ["#00C8C8", "#32FFFF", "#64FFFF", "#00AFAF", "#009696"], 
+		"rouge": ["#FF0000", "#FF3232", "#FF6464", "#960000", "#640000"], 
+		"jaune": ["#C8C800", "#FFFF32", "#FFFF64", "#AFAF00", "#969600"], 
+		"vert": ["#00C800", "#32C832", "#64C864", "#009600", "#006400"], 
+		"marron": ["#967D4B", "#C8AA64", "#FFC87D", "#7D6432", "#64320A"] 
+	}
+}
