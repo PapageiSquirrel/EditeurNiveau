@@ -13,26 +13,12 @@ function initGame() {
 	frames = 0;
 	started = false;
 
-	jump = false;
-	jump_frame = 0;
-	
-	wait_jump = false
-	wait_jump_frame = 0;
-	
-	shift = false;
-	shift_frame = 0;
-	
-	/*
-	switching = { 'bas': false, 'haut': false, 'gauche': false, 'droite': false };
-	switch_frame = 0;
-	*/
-	
-	//pts_coll_heros = { 'bas': {'x': 0, 'y': 10}, 'haut': {'x': 0, 'y': -10}, 'gauche': {'x': -10, 'y': 0}, 'droite': {'x': 10, 'y': 0}};
 	collision = { 'bas': false, 'haut': false, 'gauche': false, 'droite': false };
 	items_game = {};
 	//heros = stage.addChild(new createjs.Shape());
 	
 	// TODO: définir dans monde le point de départ du héros
+	//heros = new Heros(config.depart.pt.x, config.depart.pt.y);
 	heros = new Heros(config.depart.pt.x, config.depart.pt.y);
 	
 	moteur = new MoteurPhysique(stage, heros);
@@ -68,14 +54,24 @@ function handleTick(event) {
 							var param = item.param.proprietes[p_name]; // TODO: paramètres à ajouter à la propriété lors de l'édition
 							if (!param.vitesse) {
 								param.vitesse = 3;
-								param.d = 1;
+								param.dx = 1;
+								param.dy = 1;
 							}
-							item.obj.y += param.vitesse * param.d;
 							
-							if (item.obj.y <= 0 || item.obj.y >= (param.representation.h - param.representation.y) * config.pixel.h) {
-								param.d *= -1;
-								console.log(item.obj);
+							if (param.dx == 1 && Math.abs(item.obj.x) > Math.abs(param.representation.w) * config.pixel.w) {
+								param.dx = -1;
+							} else if (param.dx == -1 && Math.sign(item.obj.x) != Math.sign(param.representation.w)) {
+								param.dx = 1;
 							}
+							
+							if (param.dy == 1 && Math.abs(item.obj.y) > Math.abs(param.representation.h) * config.pixel.h) {
+								param.dy = -1;
+							} else if (param.dy == -1 && Math.sign(item.obj.y) != Math.sign(param.representation.h)) {
+								param.dy = 1;
+							}
+						
+							if (param.representation.w != 1) item.obj.x += param.vitesse * param.dx * (param.representation.w / (Math.abs(param.representation.w == 1 ? 0 : param.representation.w) + Math.abs(param.representation.h == 1 ? 0 : param.representation.h)));
+							if (param.representation.h != 1) item.obj.y += param.vitesse * param.dy * (param.representation.h / (Math.abs(param.representation.w == 1 ? 0 : param.representation.w) + Math.abs(param.representation.h == 1 ? 0 : param.representation.h)));
 							break;
 					}
 				}

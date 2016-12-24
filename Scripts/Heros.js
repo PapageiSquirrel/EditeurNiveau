@@ -1,13 +1,27 @@
 function Heros(x, y, forme='rond') {
 	this.shifting = false;
 	this.forme = forme;
-	this.pts_coll = { 'bas': {'x': 0, 'y': 10}, 'haut': {'x': 0, 'y': -10}, 'gauche': {'x': -10, 'y': 0}, 'droite': {'x': 10, 'y': 0}};
+	//this.pts_coll = { 'bas': {'x': 0, 'y': 10}, 'haut': {'x': 0, 'y': -10}, 'gauche': {'x': -10, 'y': 0}, 'droite': {'x': 10, 'y': 0}};
 	
+	/*
 	this.shape = stage.addChild(new createjs.Shape());
 	this.shape.x = x;
 	this.shape.y = y;
 	
-	this.shapeShift();
+	//this.shapeShift();
+	*/
+	
+	this.pts_coll = { 'bas': {'x': 0, 'y': 5}, 'haut': {'x': 0, 'y': -9}, 'gauche': {'x': -5, 'y': 0}, 'droite': {'x': 5, 'y': 0}};
+	var ss = new createjs.SpriteSheet({
+		frames: {width: 32, height: 32, regX: 11, regY: 22, count:15},
+		animations: {stand: {frames: 0}, walk: {frames: [5,6,7]}},
+		images: [preload.getResult("heros")],
+		framerate: 6
+	});
+	var s = new createjs.Sprite(ss);
+	s.setTransform(x, y, 60/32, 60/32);
+	
+	this.shape = stage.addChild(s);
 	
 	this.collision = {};
 }
@@ -54,9 +68,11 @@ Heros.prototype.move = function(dir, t) {
 				this.shape.y += moteur.timeSpent(t) * config.vitesse.chute;
 				break;
 			case 'gauche':
+				this.shape.gotoAndPlay('walk');
 				this.shape.x -= moteur.timeSpent(t) * config.vitesse.deplacement;
 				break;
 			case 'droite':
+				this.shape.gotoAndPlay('walk');
 				this.shape.x += moteur.timeSpent(t) * config.vitesse.deplacement;
 				break;
 		}
@@ -65,7 +81,7 @@ Heros.prototype.move = function(dir, t) {
 	}
 	
 	this.collision[dir] = moteur.checkCollision(this.pts_coll[dir]);
-	
+	/*
 	if (this.collision[dir]) {
 		switch(dir) {
 			case 'haut':
@@ -83,6 +99,7 @@ Heros.prototype.move = function(dir, t) {
 				break;
 		}
 	}
+	*/
 }
 
 Heros.prototype.isJumping = function() {

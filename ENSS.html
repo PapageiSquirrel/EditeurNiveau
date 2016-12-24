@@ -101,7 +101,7 @@
 				<div class="col-xs-12 nopadding">
 					<div class="col-xs-6 nopadding">
 						<!-- Toolbox d'items -->
-						<ul class="toolbox list-unstyled row nopadding">
+						<ul id="itemTypes" class="toolbox list-unstyled row nopadding">
 							<li><input id="plateforme" type="radio" name="type" onclick="changeCurrentItemType('plateforme')" /><label for="plateforme" class="btn-block">PF</label></li>
 							<li><input id="loot" type="radio" name="type" onclick="changeCurrentItemType('loot')" /><label for="loot" class="btn-block">Obj</label></li>
 							<li><input id="decor" type="radio" name="type" onclick="changeCurrentItemType('decor')" /><label for="decor" class="btn-block">Img</label></li>
@@ -117,7 +117,7 @@
 				</div>
 				
 				<!-- Banque de sprites -->
-				<div class="col-xs-12 nopadding">
+				<div class="col-xs-12 nopadding padding-top">
 					<ul id="spriteBank" class="list-unstyled row nopadding">
 						<li class="col-xs-6 nopadding"><input id="none" type="radio" name="image" onclick="changeCurrentSprite()" /><label for="none" class="btn-block"><div></div></label></li>
 					</ul>

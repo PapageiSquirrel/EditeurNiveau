@@ -9,6 +9,7 @@ function init() {
 	preload = new createjs.LoadQueue(false);
 	loadSpriteBank(function(manifest) {
 		preload.loadManifest(manifest);
+		preload.loadFile({id: "heros", src: "sprites/K.png"});
 		preload.loadFile({id: "config", src: "config.json"});
 		
 		preload.on("complete", handlePreload, this);

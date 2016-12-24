@@ -67,7 +67,12 @@ function loadEcranOnCanvas() {
 	
 	config.item.type.forEach(function(type) {
 		ecran[type+"s"].forEach(function(item) {
-			items_edit[type].push({ param: item, obj: createItem(stage, type, item) }); // param = {x: pf.x, y: pf.y, w: pf.w, h: pf.h} + ?
+			var props = [];
+			for (prop in item.proprietes) {
+				if (item.proprietes && item.proprietes[prop] && item.proprietes[prop].representation) props.push(createItemProp(type, prop, item.proprietes[prop].representation).obj);
+			}
+
+			items_edit[type].push({ param: item, obj: createItem(stage, type, item), proprietes: props }); // param = {x: pf.x, y: pf.y, w: pf.w, h: pf.h} + ?
 		});
 	});
 	

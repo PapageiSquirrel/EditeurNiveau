@@ -30,10 +30,15 @@ function initEditHandler() {
 	stage.addEventListener("stagemousemove", handleMouseMove);
 	
 	window.addEventListener('keydown', function(e) {
-		if (e.keyCode == 46) {
-			deleteItem(current_type, current_item);
+		if (e.keyCode == 46 && current_item) {
+			if (current_prop) {
+				deleteItemProp(current_item, current_prop);
+			} else {
+				deleteItem(current_type, current_item);
 			
-			current_item = null;
+				current_item = null;
+			}
+			
 			cadre_sel.graphics.clear();
 			stage.update();
 		}
@@ -89,11 +94,14 @@ function handleMouseDown(event) {
 		if (!current_item.param.proprietes) {
 			current_item.param.proprietes = {};
 		} 
+		if (!current_item.proprietes) {
+			current_item.proprietes = {};
+		}
 		
 		if (current_item.param.proprietes[current_prop]) {
 			if (config.item.proprietes[current_type][current_prop].representation) {
 				// TODO: sélection si représentation
-				var prop = current_item.proprietes[current_prop].representation;
+				var prop = current_item.param.proprietes[current_prop].representation;
 				createCadre(prop.x, prop.y, prop.w, prop.h);
 			} else {
 				console.log('existe, mais pas de representation.');
@@ -101,14 +109,40 @@ function handleMouseDown(event) {
 		} else {
 			// TODO: création
 			if (config.item.proprietes[current_type][current_prop].representation) {
+				/*
 				param = { 
 					x: current_item.param.x < Math.floor(event.stageX/config.pixel.w) ? current_item.param.x : Math.floor(event.stageX/config.pixel.w), 
 					y: current_item.param.y < Math.floor(event.stageY/config.pixel.h) ? current_item.param.y : Math.floor(event.stageY/config.pixel.h), 
 					w: current_item.param.x > Math.floor(event.stageX/config.pixel.w) ? (current_item.param.x + current_item.param.w) - Math.floor(event.stageX/config.pixel.w) +1 : Math.floor(event.stageX/config.pixel.w) - current_item.param.x +1, 
 					h: current_item.param.y > Math.floor(event.stageY/config.pixel.h) ? (current_item.param.y + current_item.param.h) - Math.floor(event.stageY/config.pixel.h) +1 : Math.floor(event.stageY/config.pixel.h) - current_item.param.y +1,
 				};
+				*/
 				
-				current_item.param.proprietes[current_prop] = createItemProp(current_type, current_prop, param)
+				param = {
+					x: current_item.param.x,
+					y: current_item.param.y,
+					w: Math.floor(event.stageX/config.pixel.w) - current_item.param.x +1,//(current_item.param.x > Math.floor(event.stageX/config.pixel.w) ? 0 : 1),
+					h: Math.floor(event.stageY/config.pixel.h) - current_item.param.y +1//(current_item.param.y > Math.floor(event.stageY/config.pixel.h) ? 0 : 1)
+				}
+				
+				var new_prop = createItemProp(current_type, current_prop, param);
+				current_item.param.proprietes[current_prop] = new_prop.param;
+				current_item.proprietes[current_prop] = new_prop.obj;
+				
+				if (param.w <= 0) {
+					var new_x, new_w;
+					new_x = new Number(param.x+param.w-1);
+					new_w = new Number(param.w*(-1)+2);
+					param.x = new_x;
+					param.w = new_w; 
+				}
+				if (param.h <= 0) { 
+					var new_y, new_h;
+					new_y = new Number(param.y+param.h-1);
+					new_h = new Number(param.h*(-1)+2);
+					param.y = new_y;
+					param.h = new_h;
+				}
 				createCadre(param.x, param.y, param.w, param.h);
 				
 				// hold = true;

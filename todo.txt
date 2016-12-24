@@ -43,3 +43,13 @@ TODO LIST
 	-> User-friendlisation
 		-> Ajout d'un .bat au projet pour lancer le serveur
 		-> Ajout d'un fichier de config pour node
+		
+	PROG JEU	
+	----------------------------------------------------------------
+	1. Inertie dans le mouvement
+	2. 
+	
+	
+	
+	
+	

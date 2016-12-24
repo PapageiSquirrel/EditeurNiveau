@@ -4,9 +4,18 @@ function changeCurrentItem(type) {
 		edition_items.removeChild(edition_items.childNodes[i]);
 	}
 	
+	var radio_type = document.getElementById(type);
+	radio_type.checked = true;
+	
 	current_prop = null;
 	for (prop in config.item.proprietes[type]) {
 		createListElement(edition_items, "col-xs-12", prop, "proprietes", changeCurrentItemProp);
+	}
+	
+	if (current_item.proprietes) {
+		for (prop in current_item.proprietes) {
+			stage.addChild(current_item.proprietes[prop]);
+		}
 	}
 }
 
@@ -109,6 +118,7 @@ function createCadre(x, y, w, h) {
 	cadre_sel.graphics.clear();
 	cadre_sel.graphics.setStrokeStyle(2);
 	// TODO: changer la couleur
+	
 	cadre_sel.graphics.beginStroke("red").drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
 }
 
@@ -125,28 +135,18 @@ function createLine(st, x, y, w, h) {
 }
 
 function createItem(st, type, param) {
-	switch (type) {
-		case 'plateforme':
-			return createPlateform(st, param.x, param.y, param.w, param.h, param.couleur, param.sprite);
-			break;
-		case 'loot':
-			return createLoot(st, param.x, param.y, param.w, param.h, param.s);
-			break;
-		case 'decor':
-			return createDecor(st, param.x, param.y, param.w, param.h, param.couleur, param.sprite);
-			break;
-	}
+	return createItemOnCanvas(st, param.x, param.y, param.w, param.h, param.couleur, param.sprite);
 }
 
 function createItemProp(type, prop, param) {
 	var prop_info = config.item.proprietes[type][prop];
-	var res = {};
+	var res = {'param': {}, 'obj': []};
 	
 	for (p_name in prop_info) {
 		if (p_name == "representation") {
 			if (prop_info[p_name]) {
-				res[p_name] = {'x': param.x, 'y': param.y, 'w': param.w, 'h': param.h};
-				createLine(stage, param.x, param.y, param.w, param.h);
+				res.param[p_name] = {'x': param.x, 'y': param.y, 'w': param.w, 'h': param.h};
+				res.obj.push(createLine(stage, param.x, param.y, param.w, param.h));
 			}
 		} else {
 			
@@ -156,8 +156,8 @@ function createItemProp(type, prop, param) {
 	return res;
 }
 
-function createPlateform(st, x, y, w, h, couleur, id_sprite) {
-	var pf;
+function createItemOnCanvas(st, x, y, w, h, couleur, id_sprite) {
+	var item;
 	
 	if (id_sprite) {
 		var s = sprites[id_sprite];
@@ -169,58 +169,18 @@ function createPlateform(st, x, y, w, h, couleur, id_sprite) {
 		var rgb = getRGB(config.palette[couleur.base][couleur.nuance]);
 		var f = new createjs.ColorFilter(0, 0, 0, 1, rgb[0], rgb[1], rgb[2], 0);
 		
-		pf = new createjs.Sprite(ss);
-		pf.filters = [f];
-		pf.setTransform(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w / s.naturalWidth, h * config.pixel.h / s.naturalHeight);
-		var pf_img = pf.clone();
-		pf.cache(0, 0, s.naturalWidth, s.naturalHeight);
+		item = new createjs.Sprite(ss);
+		item.filters = [f];
+		item.setTransform(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w / s.naturalWidth, h * config.pixel.h / s.naturalHeight);
+		var pf_img = item.clone();
+		item.cache(0, 0, s.naturalWidth, s.naturalHeight);
 	} else {
-		var graph = new createjs.Graphics().beginLinearGradientFill(["#FFFFFF", config.palette[couleur.base][couleur.nuance]], [0, 0.1], 0, y * config.pixel.h, 0, (y + h) * config.pixel.h).drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
-		pf = new createjs.Shape(graph);
+		var graph = new createjs.Graphics().beginLinearGradientFill([getLighterColor(config.palette[couleur.base][couleur.nuance]), config.palette[couleur.base][couleur.nuance], config.palette[couleur.base][couleur.nuance], getDarkerColor(config.palette[couleur.base][couleur.nuance])], [0, 0.1, 0.9, 1], 0, y * config.pixel.h, 0, (y + h) * config.pixel.h).drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
+		item = new createjs.Shape(graph);
 	}
 	
-	st.addChild(pf);
-	return pf;
-}
-
-function createLoot(st, x, y , w, h, s) {
-	var ss_fond = new createjs.SpriteSheet({
-		frames: { width: 874, height: 1404},
-		images: [preload.getResult("fondJeu")]
-	});
-	fond = new createjs.Sprite(ss_fond);
-	fond.setTransform(0, 0, taille_ecran.width/874, taille_ecran.height/1404);
-	
-	st.addChild(pf_shape);
-	return pf_shape;
-}
-
-function createDecor(st, x, y , w, h, couleur, id_sprite) {
-	var decor;
-	
-	if (id_sprite) {
-		var s = sprites[id_sprite];
-		var ss = new createjs.SpriteSheet({
-			frames: {width: s.naturalWidth, height: s.naturalHeight},
-			images: [preload.getResult(s.id)]
-		});
-		
-		var rgb = getRGB(config.palette[couleur.base][couleur.nuance]);
-		var f = new createjs.ColorFilter(0, 0, 0, 1, rgb[0], rgb[1], rgb[2], 0);
-		
-		decor = new createjs.Sprite(ss);
-		decor.filters = [f];
-		decor.setTransform(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w / s.naturalWidth, h * config.pixel.h / s.naturalHeight);
-		var decor_img = decor.clone();
-		decor.cache(0, 0, s.naturalWidth, s.naturalHeight);
-	} else {
-		var graph = new createjs.Graphics().beginLinearGradientFill(["#FFFFFF", config.palette[couleur.base][couleur.nuance]], [0, 0.5], 0, y * config.pixel.h, 0, (y + h) * config.pixel.h).drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
-	
-		decor = new createjs.Shape(graph);
-	}
-	
-	st.addChild(decor);
-	return decor;
+	st.addChild(item);
+	return item;
 }
 
 function deleteItem(type, item) {
@@ -239,6 +199,17 @@ function deleteItem(type, item) {
 	}
 }
 
+function deleteItemProp(item, prop) {
+	if (item && item.proprietes && prop) {
+		for(var i = 0 ; i < item.proprietes[prop].length ; i++){
+			stage.removeChild(item.proprietes[prop][i]);
+		}
+		
+		item.proprietes[prop] = undefined;
+		item.param.proprietes[prop] = undefined;
+	}
+}
+
 function getRGB(couleur) {
 	var rgb = [];
 	
@@ -248,6 +219,32 @@ function getRGB(couleur) {
 	}
 	
 	return rgb; 
+}
+
+function getHexa(rgb) {
+	var hexa = "#";
+	for (var i = 0 ; i < 3 ; i++) {
+		var c_h = parseInt(rgb[i],10).toString(16).toUpperCase();
+		if (c_h.length < 2) c_h = "0" + c_h;
+		hexa += c_h;
+	}
+	return hexa;
+}
+
+function getLighterColor(couleur) {
+	var rgb = getRGB(couleur)
+	for (var i = 0 ; i < 3 ; i++) {
+		rgb[i] = (rgb[i]+255)/2;
+	}
+	return getHexa(rgb);
+}
+
+function getDarkerColor(couleur) {
+	var rgb = getRGB(couleur)
+	for (var i = 0 ; i < 3 ; i++) {
+		rgb[i] = rgb[i]/2;
+	}
+	return getHexa(rgb);
 }
 
 /*
