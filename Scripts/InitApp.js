@@ -2,14 +2,11 @@ var stage, preload, sprites, config;
 var monde, ecran, items;
 
 function init() {
-	stage = new createjs.Stage("ZoneJeu");
-	
 	sprites = {};
 	
 	preload = new createjs.LoadQueue(false);
 	loadSpriteBank(function(manifest) {
 		preload.loadManifest(manifest);
-		preload.loadFile({id: "heros", src: "sprites/K.png"});
 		preload.loadFile({id: "config", src: "config.json"});
 		
 		preload.on("complete", handlePreload, this);
@@ -34,6 +31,7 @@ function handlePreload() {
 
 function definePixel(prop) {
 	var canvas = document.getElementById("ZoneJeu");
+	stage = new createjs.Stage(canvas);
 	
 	if (window.innerWidth/4 < window.innerHeight/3) {
 		var w = window.innerWidth * prop; // 3/4
@@ -63,20 +61,26 @@ function clearCanvas() {
 		
 		clearAdjacentCanvas();
 		current_item = null;
+		current_prop = null;
 		cadre_sel.graphics.clear();
 		
 		config.item.type.forEach(function(type) {
 			for(var i = items_edit[type].length-1 ; i >= 0 ; i--) {
+				for (prop in items_edit[type][i].param.proprietes) {
+					deleteItemProp(items_edit[type][i], prop);
+				}
 				deleteItem(type, items_edit[type][i]);
 			}
-			
+
 			for(var i = items_all_edit[type].length-1; i >= 0 ; i--) {
+				for (prop in items_all_edit[type][i].param.proprietes) {
+					deleteItemProp(items_all_edit[type][i], prop);
+				}
 				deleteItem(type, items_all_edit[type][i]);
 			}
 		});
 		
 		stage.removeChild(grid);
-		
 		stage.update();
 	}
 }

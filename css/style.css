@@ -1,6 +1,5 @@
 .nopadding {
-   padding-left: 0 !important;
-   padding-right: 0 !important;
+   padding: 0 !important;
    margin: 0 !important;
 }
 
@@ -12,6 +11,12 @@
 	padding-bottom: 5px;
 }
 
+.max-width-40 {
+	max-width: 40px;
+}
+.max-width-80 {
+	max-width: 80px;
+}
 
 /* Canvas */
 canvas {
@@ -19,7 +24,7 @@ canvas {
 	outline: none;
 }
 
-canvas#ZoneJeu, canvas#haut, canvas#bas {
+canvas#ZoneJeu, canvas#ZoneUpdate, canvas#haut, canvas#bas {
 	padding: 0;
 	display: block;
 	margin: auto;
@@ -53,6 +58,8 @@ canvas#droite {
 
 .toolbox label {
 	position: relative;
+	background-size: 40px 40px;
+	background-repeat: no-repeat;
 	margin: 0;
 	cursor: pointer;
 	height: 40px;   

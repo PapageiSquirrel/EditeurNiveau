@@ -4,31 +4,49 @@ function changeCurrentItem(type) {
 		edition_items.removeChild(edition_items.childNodes[i]);
 	}
 	
-	var radio_type = document.getElementById(type);
-	radio_type.checked = true;
-	
 	current_prop = null;
-	for (prop in config.item.proprietes[type]) {
-		createListElement(edition_items, "col-xs-12", prop, "proprietes", changeCurrentItemProp);
-	}
-	
-	if (current_item.proprietes) {
-		for (prop in current_item.proprietes) {
-			stage.addChild(current_item.proprietes[prop]);
+	deleteAjustmentVariables();
+	if (current_item) {
+		for (prop in config.item.proprietes[type]) {
+			createListElement(edition_items, "col-xs-12", prop, "proprietes", changeCurrentItemProp, config.item.proprietes[type][prop].img ? "img/assets/" + config.item.proprietes[type][prop].img : null);
 		}
+	} else {
+		cadre_sel.graphics.clear();
+		stage.update();
 	}
 }
 
 function changeCurrentItemProp(id) {
 	if (current_item) {
 		current_prop = id;
+
+		deleteAjustmentVariables();
+		
+		if (!current_item.param.proprietes) {
+			current_item.param.proprietes = {};
+		}
+		
+		if (!current_item.param.proprietes[id]) {
+			createAjustmentVariables(current_type, id);
+		} else {
+			addAjustmentVariables(current_type, id);
+		}
 	}
 }
 
 function changeCurrentItemType(type) {
 	current_type = type;
 	
+	var ul = document.getElementById("spriteBank");
+	for (var i = ul.childNodes.length-1 ; i > 1 ; i--) {
+		ul.removeChild(ul.childNodes[i]);
+	}
+	for (s in sprites[type]) {
+		createListElement(ul, "col-xs-6", s, "image", changeCurrentSprite, "img/sprites/" + type + "/" + s + ".png");
+	}
+	
 	changeCurrentItem(type);
+	changeCurrentSprite();
 }
 
 function changeCurrentColor(couleur) {
@@ -50,37 +68,140 @@ function changeCurrentSprite(id=undefined) {
 }
 
 function loadSpriteBank(callback) {
-	var path = "img/";
+	var path = "img/sprites/";
 	
-	getListFiles(path, function(list) {
-		var ul;
-		if (mode == 'edit')	ul = document.getElementById("spriteBank");
-		
+	getListFilesInSubdir(path, function(list) {
 		var manifest_body = [];
-		
-		for(var i = 0 ; i < list.length ; i++) {
-			var img = document.createElement("img");
-			img.onload = function() {
-				var id = this.src.slice(this.src.lastIndexOf("/")+1, this.src.indexOf("."));
-				sprites[id] = { 'id': id, 'naturalWidth': this.width, 'naturalHeight': this.height };
+
+		for (type in list) {
+			sprites[type] = {};
+			for(var i = 0 ; i < list[type].length ; i++) {
+				var img = document.createElement("img");
+				img.onload = function() {
+					var id = this.src.slice(this.src.lastIndexOf("/")+1, this.src.indexOf("."));
+					var type = this.src.slice(this.src.lastIndexOf("sprites/")+8, this.src.lastIndexOf("/"));
+					sprites[type][id] = { 'id': id, 'naturalWidth': this.width, 'naturalHeight': this.height };
+				}
+				img.src = path + type + '/' + list[type][i];
+				
+				manifest_body.push({"id": list[type][i].slice(0, list[type][i].indexOf(".")), "src": type + '/' + list[type][i]});
 			}
-			img.src = path + list[i];
-			
-			if (mode == 'edit') {
-				createListElement(ul, "col-xs-6", list[i].slice(0, list[i].indexOf(".")), "image", changeCurrentSprite, path + list[i]);
-			}
-			
-			
-			manifest_body.push({"id": list[i].slice(0, list[i].indexOf(".")), "src": list[i]});
 		}
 		
 		callback({"path": path, "manifest": manifest_body});
 	});
 }
 
+function deleteAjustmentVariables() {
+	var div = document.getElementById("varaju");
+	if (div.childElementCount > 0) {
+		for(var i = div.childNodes.length-1 ; i >= 0 ; i--) {
+			div.removeChild(div.childNodes[i]);
+		}
+	}
+}
+
+function addAjustmentVariables(type, prop) {
+	var prop_info = config.item.proprietes[type][prop];
+	var div = document.getElementById("varaju");
+	
+	if (prop_info.configurable) {
+		prop_info.configurable.forEach(function(var_aju) {
+			if (var_aju.format == "number" || var_aju.format == "text") {
+				var input = document.createElement("input");
+				input.type = "text";
+				input.id = var_aju.name;
+				input.name = var_aju.name;
+				input.className = "col-xs-6 nopadding";
+				if (current_item && current_item.param.proprietes && current_item.param.proprietes[prop] && current_item.param.proprietes[prop][var_aju.name]) {
+					input.value = current_item.param.proprietes[prop][var_aju.name];
+				} else {
+					input.value = var_aju.defaut;
+				}
+				input.onchange = function() {
+					if (this.value) {
+						editItemProp(prop, this.name, var_aju.format, this.value);
+					}
+				}
+				
+				var label = document.createElement("label");
+				label.htmlFor = input.id;
+				label.innerHTML = var_aju.name;
+				label.className = "col-xs-6 nopadding";
+				
+				div.appendChild(label);
+				div.appendChild(input);
+			} else if (var_aju.format == "boolean") {
+				var label = document.createElement("label");
+				label.innerHTML = var_aju.name;
+				label.className = "col-xs-12 nopadding";
+					
+				div.appendChild(label);
+				
+				var_aju.options.forEach(function(opt) {
+					var input = document.createElement("input");
+					input.type = "checkbox";
+					input.id = opt;
+					input.name = var_aju.name;
+					input.value = opt;
+					input.className = "col-xs-4 nopadding";
+					
+					if (current_item && current_item.param.proprietes && current_item.param.proprietes[prop] && current_item.param.proprietes[prop][var_aju.name]) {
+						input.checked = current_item.param.proprietes[prop][var_aju.name].indexOf(opt) != -1;
+					} else {
+						input.checked = false;
+					}
+					
+					input.onchange = function() {
+						editItemProp(prop, this.name, var_aju.format, {'option': this.value, 'checked': this.checked});
+					}
+					
+					var label = document.createElement("label");
+					label.htmlFor = input.id;
+					label.innerHTML = opt;
+					label.className = "col-xs-8 nopadding";
+					
+					div.appendChild(label);
+					div.appendChild(input);
+				});
+			}
+		});
+	}
+	
+	if (!prop_info.representation) {
+		div.removeChild(document.getElementById("btnVarAju"));
+		createItemProp(type, prop);
+	}
+	
+}
+
+function createAjustmentVariables(type, prop) {
+	var prop_info = config.item.proprietes[type][prop];
+	
+	try {
+		if (prop_info.configurable) {
+			var div = document.getElementById("varaju");
+			
+			if (!prop_info.representation) {
+				var btn = document.createElement("button");
+				btn.id = "btnVarAju";
+				btn.name = "btnVarAju";
+				btn.innerHTML = "Ajouter";
+				btn.onclick = function() {
+					addAjustmentVariables(type, prop);
+				}
+				div.appendChild(btn);
+			}
+		}
+	} catch(e) {
+		console.log(e, type, prop);
+	}
+	
+}
+
 function createListElement(ul, li_size, input_id, input_name, fn_oc, label_bi=undefined) {
 	var li = document.createElement("li");
-	li.className = li_size + " nopadding";
+	li.className = li_size + " nopadding max-width-40";
 	
 	var input = document.createElement("input");
 	input.type = "radio";
@@ -91,7 +212,21 @@ function createListElement(ul, li_size, input_id, input_name, fn_oc, label_bi=un
 	var label = document.createElement("label");
 	label.htmlFor = input.id;
 	label.className = "btn-block";
-	if (label_bi) label.style.backgroundImage = "url(" + label_bi + ")";
+	if (label_bi) {
+		label.style.backgroundImage = "url(" + label_bi + ")";
+		label.style.backgroundPosition = "left";
+		var s;
+		var found = config.sprites.some(function(sp) {
+			if (sp.nom == input_id) {
+				s = sp;
+				return true;
+			}
+		});
+		
+		if (found) {
+			label.style.backgroundSize = 120 + "px " + 40 + "px";
+		}
+	}
 	
 	label.appendChild(document.createElement("div"));
 	li.appendChild(input);
@@ -118,49 +253,221 @@ function createCadre(x, y, w, h) {
 	cadre_sel.graphics.clear();
 	cadre_sel.graphics.setStrokeStyle(2);
 	// TODO: changer la couleur
-	
 	cadre_sel.graphics.beginStroke("red").drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
 }
 
-function createLine(st, x, y, w, h) {
-	var line = new createjs.Shape();
+function createItem(st, type, param, withProp=true) {
+	var created_item = {};
+	var param_clone = {};
 	
-	line.graphics.setStrokeStyle(2);
-	line.graphics.beginStroke("#0000FF"); // bleu ?
-	line.graphics.moveTo((x+0.5) * config.pixel.w, (y+0.5) * config.pixel.h);
-	line.graphics.lineTo((x+w-0.5) * config.pixel.w, (y+h-0.5) * config.pixel.h);
-	
-	st.addChild(line);
-	return line;
-}
-
-function createItem(st, type, param) {
-	return createItemOnCanvas(st, param.x, param.y, param.w, param.h, param.couleur, param.sprite);
-}
-
-function createItemProp(type, prop, param) {
-	var prop_info = config.item.proprietes[type][prop];
-	var res = {'param': {}, 'obj': []};
-	
-	for (p_name in prop_info) {
-		if (p_name == "representation") {
-			if (prop_info[p_name]) {
-				res.param[p_name] = {'x': param.x, 'y': param.y, 'w': param.w, 'h': param.h};
-				res.obj.push(createLine(stage, param.x, param.y, param.w, param.h));
+	for (p in param) {
+		if (withProp && param.proprietes && p == "proprietes") {
+			param_clone[p] = {};
+			for (prop in param[p]) {
+				param_clone[p][prop] = {};
+				if (param[p][prop].representation) {
+					param_clone[p][prop].representation = {};
+					if (!param.proprietes[prop].representation.param) {
+						param_clone[p][prop].representation.param = JSON.parse(JSON.stringify(param[p][prop].representation));
+					} else {
+						param_clone[p][prop].representation.param = JSON.parse(JSON.stringify(param[p][prop].representation.param));
+					}
+				}
 			}
 		} else {
-			
+			param_clone[p] = param[p] != undefined ? JSON.parse(JSON.stringify(param[p])) : undefined;
+		}
+	}
+	created_item.param = param_clone;
+
+	created_item.obj = drawItem(st, type, param.x, param.y, param.w, param.h, param.couleur, param.sprite);
+	
+	current_item = created_item;
+	
+	// TODO : Créer les propriétés de l'objet
+	if (withProp && param.proprietes) {
+		for (prop in param.proprietes) {
+			for (va in param.proprietes[prop]) {
+				if ((mode == "edit" || prop == "traversable") && va == "representation" && param.proprietes[prop].representation) {
+					var param_sauve = JSON.parse(JSON.stringify(created_item.param.proprietes[prop].representation.param));
+					created_item.param.proprietes[prop].representation.obj = createGraphProp(st, prop, param_sauve);
+				} else {
+					created_item.param.proprietes[prop][va] = JSON.parse(JSON.stringify(param.proprietes[prop][va]));
+				}
+			}
 		}
 	}
 	
+	current_item = null;
+
+	// TEST REG
+	//created_item.obj.regX = param.w * config.pixel.w;
+	
+	return created_item;
+}
+
+function copyItem(x, y) {
+	var param_clone = {};
+	var param = current_item.param;
+	
+	for (p in param) {
+		if (param.proprietes && p == "proprietes") {
+			param_clone[p] = {};
+			for (prop in param[p]) {
+				param_clone[p][prop] = {};
+				for (va in param[p][prop]) {
+					if (va == "representation") {
+						param_clone[p][prop].representation = {};
+						param_clone[p][prop].representation.param = JSON.parse(JSON.stringify(param[p][prop].representation.param));
+						
+						var new_param = param_clone[p][prop].representation.param;
+						var old_param = param[p][prop].representation.param;
+						switch(prop) {
+							case 'mouvement':
+								new_param.x1 = x;
+								new_param.y1 = y;
+								new_param.x2 = x + old_param.x2 - old_param.x1;
+								new_param.y2 = y + old_param.y2 - old_param.y1;
+								break;
+							default:
+								new_param.x = x;
+								new_param.y = y;
+								break;
+						}
+					} else {
+						param_clone[p][prop][va] = param[p][prop][va] != undefined ? JSON.parse(JSON.stringify(param[p][prop][va])) : undefined;
+					}
+				} 
+			}
+		} else {
+			try {
+				param_clone[p] = param[p] != undefined ? JSON.parse(JSON.stringify(param[p])) : undefined;
+			} catch(e) {
+				console.log(e);
+				console.log(p, param);
+			}
+		}
+	}
+	
+	param_clone.x = x;
+	param_clone.y = y;
+	
+	return createItem(stage, current_type, param_clone);
+}
+
+function createItemProp(type, prop, param=undefined) {
+	var prop_info = config.item.proprietes[type][prop];
+	var res = {};
+	
+	for (p_name in prop_info) {
+		if (p_name == "representation") {
+			if (prop_info[p_name] && param) {
+				res[p_name] = createProp(stage, prop, param[p_name]);
+			}
+		} else if (p_name == "img") {
+			
+		} else if (p_name == "configurable") {
+			prop_info[p_name].forEach(function(var_aju) {
+				if (current_item && current_item.param.proprietes && current_item.param.proprietes[prop]) {
+					res[var_aju.name] = current_item.param.proprietes[prop][var_aju.name];
+				} else {
+					if (var_aju.defaut) {
+						res[var_aju.name] = var_aju.defaut;
+					} else if (var_aju.options) {
+						res[var_aju.name] = [];
+					}
+				}
+			});
+		}
+	}
+
 	return res;
 }
 
-function createItemOnCanvas(st, x, y, w, h, couleur, id_sprite) {
-	var item;
+function editItemProp(prop, name, format, value) {
+	if (current_item && current_item.param.proprietes && current_item.param.proprietes[prop] && !current_item.param.proprietes[prop][name]) {
+		current_item.param.proprietes[prop][name] = null;
+	}
+	
+	if (current_item && current_item.param.proprietes && current_item.param.proprietes[prop] && value) {
+		var prop_sauve = current_item.param.proprietes[prop];
+		
+		if (format == "text") {
+			prop_sauve[name] = value;
+			if (prop_sauve.representation.obj) prop_sauve.representation.obj.text = value;
+			stage.update();
+		}
+		if (format == "number")	prop_sauve[name] = Number(value);
+		if (format == "boolean") {
+			if (!prop_sauve[name]) prop_sauve[name] = [];
+			if (value.checked) prop_sauve[name].push(value.option);
+			else prop_sauve[name].splice(prop_sauve[name].indexOf(value.option), 1);
+		}
+	}
+}
+
+function drawItem(st, type, x, y, w, h, couleur, id_sprite) {
+	var pf;
+	if (id_sprite) {
+		pf = new createjs.Container();
+		
+		var s = sprites[type][id_sprite];
+		
+		var sprite;
+		var found = config.sprites.some(function(sp) {
+			if (sp.nom == s.id) {
+				sprite = sp;
+				return true;
+			}
+		});
+		
+		var ss, sub_pf;
+		if (found) {
+			ss = new createjs.SpriteSheet({
+				frames: {width: sprite.w, height: sprite.h},
+				images: [preload.getResult(s.id)]
+			});
+			sub_pf = new createjs.Sprite(ss);
+			sub_pf.setTransform(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w / sprite.w, h * config.pixel.h / sprite.h);
+		} else {
+			ss = new createjs.SpriteSheet({
+				frames: {width: s.naturalWidth, height: s.naturalHeight},
+				images: [preload.getResult(s.id)]
+			});
+			sub_pf = new createjs.Sprite(ss);
+			sub_pf.setTransform(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w / s.naturalWidth, h * config.pixel.h / s.naturalHeight);
+		}
+		
+		pf.addChild(sub_pf);
+		
+		sub_pf = sub_pf.clone();
+		if (couleur.base != "noir") {
+			var rgb = getRGB(config.palette[couleur.base][couleur.nuance]);
+			var f = new createjs.ColorFilter(0, 0, 0, 0.5, rgb[0], rgb[1], rgb[2], 0);
+			sub_pf.filters = [f];
+		}
+		sub_pf.cache(0, 0, s.naturalWidth, s.naturalHeight);
+		pf.addChild(sub_pf);
+
+		pf.setBounds(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
+	} else {
+		//var graph = new createjs.Graphics().beginLinearGradientFill(["#FFFFFF", config.palette[couleur.base][couleur.nuance]], [0, 0.1], 0, y * config.pixel.h, 0, (y + h) * config.pixel.h).drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
+		var graph = new createjs.Graphics().beginFill(config.palette[couleur.base][couleur.nuance]).drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
+		pf = new createjs.Shape(graph);
+		pf.setBounds(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
+	}
+	
+	if (mode == "game" && (type == "decor" || type == "loot")) st.addChildAt(pf, 0);
+	else st.addChild(pf);
+	return pf;
+}
+
+/*
+function createLoot(st, x, y , w, h, couleur, id_sprite) {
+	var loot;
 	
 	if (id_sprite) {
-		var s = sprites[id_sprite];
+		var s = sprites['loot'][id_sprite];
 		var ss = new createjs.SpriteSheet({
 			frames: {width: s.naturalWidth, height: s.naturalHeight},
 			images: [preload.getResult(s.id)]
@@ -169,44 +476,81 @@ function createItemOnCanvas(st, x, y, w, h, couleur, id_sprite) {
 		var rgb = getRGB(config.palette[couleur.base][couleur.nuance]);
 		var f = new createjs.ColorFilter(0, 0, 0, 1, rgb[0], rgb[1], rgb[2], 0);
 		
-		item = new createjs.Sprite(ss);
-		item.filters = [f];
-		item.setTransform(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w / s.naturalWidth, h * config.pixel.h / s.naturalHeight);
-		var pf_img = item.clone();
-		item.cache(0, 0, s.naturalWidth, s.naturalHeight);
+		loot = new createjs.Sprite(ss);
+		loot.filters = [f];
+		loot.setTransform(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w / s.naturalWidth, h * config.pixel.h / s.naturalHeight);
+		var loot_img = loot.clone();
+		loot.cache(0, 0, s.naturalWidth, s.naturalHeight);
 	} else {
-		var graph = new createjs.Graphics().beginLinearGradientFill([getLighterColor(config.palette[couleur.base][couleur.nuance]), config.palette[couleur.base][couleur.nuance], config.palette[couleur.base][couleur.nuance], getDarkerColor(config.palette[couleur.base][couleur.nuance])], [0, 0.1, 0.9, 1], 0, y * config.pixel.h, 0, (y + h) * config.pixel.h).drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
-		item = new createjs.Shape(graph);
+		var graph = new createjs.Graphics().beginLinearGradientFill(["#FFFFFF", config.palette[couleur.base][couleur.nuance]], [0, 0.1], 0, y * config.pixel.h, 0, (y + h) * config.pixel.h).drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
+		loot = new createjs.Shape(graph);
 	}
 	
-	st.addChild(item);
-	return item;
+	st.addChild(loot);
+	return loot;
 }
+
+function createDecor(st, x, y , w, h, couleur, id_sprite) {
+	var decor;
+	
+	if (id_sprite) {
+		var s = sprites['decor'][id_sprite];
+		var ss = new createjs.SpriteSheet({
+			frames: {width: s.naturalWidth, height: s.naturalHeight},
+			images: [preload.getResult(s.id)]
+		});
+		
+		var rgb = getRGB(config.palette[couleur.base][couleur.nuance]);
+		var f = new createjs.ColorFilter(0, 0, 0, 1, rgb[0], rgb[1], rgb[2], 0);
+		
+		decor = new createjs.Sprite(ss);
+		decor.filters = [f];
+		decor.setTransform(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w / s.naturalWidth, h * config.pixel.h / s.naturalHeight);
+		var decor_img = decor.clone();
+		decor.cache(0, 0, s.naturalWidth, s.naturalHeight);
+	} else {
+		var graph = new createjs.Graphics().beginLinearGradientFill(["#FFFFFF", config.palette[couleur.base][couleur.nuance]], [0, 0.5], 0, y * config.pixel.h, 0, (y + h) * config.pixel.h).drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
+	
+		decor = new createjs.Shape(graph);
+	}
+	
+	st.addChild(decor);
+	return decor;
+}
+*/
 
 function deleteItem(type, item) {
 	if (item) {
-		if (item.obj.constructor === Array) {
-			item.obj.forEach(function(o) {
-				stage.removeChild(o);
-			});
-		} else {
-			stage.removeChild(item.obj);
-		}
+		stage.removeChild(item.obj);
 		
-		for(var i = items_edit[type].length-1; i >= 0 ; i--) { 
-			if (items_edit[type][i] == item) items_edit[type].splice(i, 1);
+		if (mode == 'edit') {
+			for(var i = items_edit[type].length-1; i >= 0 ; i--) { 
+				if (items_edit[type][i] == item) items_edit[type].splice(i, 1);
+			}
+		} else if (mode == 'game') {
+			for(var i = items_game[ecran.nom][type].length-1; i >= 0 ; i--) { 
+				if (items_game[ecran.nom][type][i] == item) items_game[ecran.nom][type].splice(i, 1);
+			}
 		}
 	}
 }
 
 function deleteItemProp(item, prop) {
-	if (item && item.proprietes && prop) {
-		for(var i = 0 ; i < item.proprietes[prop].length ; i++){
-			stage.removeChild(item.proprietes[prop][i]);
+	if (item && prop) {
+		var item_prop = item.param.proprietes[prop];
+		if (item_prop) {
+			if (item_prop['representation']) {
+				try {
+					stage.removeChild(item_prop['representation'].obj);
+				} catch(e) {
+					console.log(e);
+					console.log(item);
+				}
+				
+			}
 		}
 		
-		item.proprietes[prop] = undefined;
-		item.param.proprietes[prop] = undefined;
+		deleteAjustmentVariables();
 	}
 }
 
@@ -220,39 +564,3 @@ function getRGB(couleur) {
 	
 	return rgb; 
 }
-
-function getHexa(rgb) {
-	var hexa = "#";
-	for (var i = 0 ; i < 3 ; i++) {
-		var c_h = parseInt(rgb[i],10).toString(16).toUpperCase();
-		if (c_h.length < 2) c_h = "0" + c_h;
-		hexa += c_h;
-	}
-	return hexa;
-}
-
-function getLighterColor(couleur) {
-	var rgb = getRGB(couleur)
-	for (var i = 0 ; i < 3 ; i++) {
-		rgb[i] = (rgb[i]+255)/2;
-	}
-	return getHexa(rgb);
-}
-
-function getDarkerColor(couleur) {
-	var rgb = getRGB(couleur)
-	for (var i = 0 ; i < 3 ; i++) {
-		rgb[i] = rgb[i]/2;
-	}
-	return getHexa(rgb);
-}
-
-/*
-function checkConstraint(name) {
-	switch(name) {
-		case 'prop_mouvement':
-			if ()
-			break;
-	}
-}
-*/

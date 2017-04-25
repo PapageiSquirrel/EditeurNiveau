@@ -1,11 +1,13 @@
 // GLOBALES
-var keyState;
+var keyState, fpsLabel;
 // SPRITES
-var moteur, heros, monde, ecran, items_game_game;
+var moteur, heros, monde, ecran, items_game;
 // ETATS
 var started, jump, collision, shift, wait_jump;
 // FRAMES
 var frames, jump_frame, jump_nb_frames, wait_jump_frame, wait_jump_nb_frames, shift_frame, shift_nb_frames;
+// MULTI
+var autres;
 
 function initGame() {
 	// INIT VARIABLES
@@ -13,14 +15,27 @@ function initGame() {
 	frames = 0;
 	started = false;
 
+	jump = false;
+	jump_frame = 0;
+	
+	wait_jump = false
+	wait_jump_frame = 0;
+	
+	shift = false;
+	shift_frame = 0;
+	
+	autres = [];
+	
+	/*
+	switching = { 'bas': false, 'haut': false, 'gauche': false, 'droite': false };
+	switch_frame = 0;
+	*/
+	
+	//pts_coll_heros = { 'bas': {'x': 0, 'y': 10}, 'haut': {'x': 0, 'y': -10}, 'gauche': {'x': -10, 'y': 0}, 'droite': {'x': 10, 'y': 0}};
 	collision = { 'bas': false, 'haut': false, 'gauche': false, 'droite': false };
 	items_game = {};
-	//heros = stage.addChild(new createjs.Shape());
-	
-	// TODO: définir dans monde le point de départ du héros
-	//heros = new Heros(config.depart.pt.x, config.depart.pt.y);
-	heros = new Heros(config.depart.pt.x, config.depart.pt.y);
-	
+
+	heros = new Heros();
 	moteur = new MoteurPhysique(stage, heros);
 	// FIN INIT
 
@@ -28,8 +43,24 @@ function initGame() {
 }
 
 function initGameHandler() {
+	var depart_stage = { 
+		'x': ecran.position.x * config.taille.w * config.pixel.w, 
+		'y': ecran.position.y * config.taille.h * config.pixel.h
+	}
+
+	moteur.start(depart_stage.x, depart_stage.y);
+	heros.start(depart_stage.x + config.depart.pt.x, depart_stage.y + config.depart.pt.y);
+	
+	moteur.initTriggers();
+	moteur.initItemsLinks();
 	started = true;	
 	
+	fpsLabel = new createjs.Text("-- fps", "bold 18px Arial", "#FFF");
+	stage.addChild(fpsLabel);
+	fpsLabel.x = depart_stage.x;
+	fpsLabel.y = depart_stage.y;
+	
+	createjs.Ticker.timingMode = createjs.Ticker.RAF;
 	ticker = createjs.Ticker.addEventListener("tick", handleTick);
 	createjs.Ticker.setFPS(60);
 	
@@ -42,84 +73,106 @@ function initGameHandler() {
 }
 
 function handleTick(event) {
-	if (heros.isSwitching()) {
+	fpsLabel.text = Math.round(createjs.Ticker.getMeasuredFPS()) + " fps";
+	// Mort du héros
+	if (heros.isRespawning()) {
+		moteur.animateDeath();
+	// Changement d'écran du héros
+	} else if (heros.isSwitching()) {
 		moteur.animateSwitch();
+	// Cas normal (jeu)
 	} else {
-		// TODO: mouvement des plateformes etc...
-		items_game[ecran.nom]['plateforme'].forEach(function(item) {
-			if (item.param.proprietes) {
-				for (p_name in item.param.proprietes) {
-					switch(p_name) {
-						case 'mouvement':
-							var param = item.param.proprietes[p_name]; // TODO: paramètres à ajouter à la propriété lors de l'édition
-							if (!param.vitesse) {
-								param.vitesse = 3;
-								param.dx = 1;
-								param.dy = 1;
-							}
-							
-							if (param.dx == 1 && Math.abs(item.obj.x) > Math.abs(param.representation.w) * config.pixel.w) {
-								param.dx = -1;
-							} else if (param.dx == -1 && Math.sign(item.obj.x) != Math.sign(param.representation.w)) {
-								param.dx = 1;
-							}
-							
-							if (param.dy == 1 && Math.abs(item.obj.y) > Math.abs(param.representation.h) * config.pixel.h) {
-								param.dy = -1;
-							} else if (param.dy == -1 && Math.sign(item.obj.y) != Math.sign(param.representation.h)) {
-								param.dy = 1;
-							}
-						
-							if (param.representation.w != 1) item.obj.x += param.vitesse * param.dx * (param.representation.w / (Math.abs(param.representation.w == 1 ? 0 : param.representation.w) + Math.abs(param.representation.h == 1 ? 0 : param.representation.h)));
-							if (param.representation.h != 1) item.obj.y += param.vitesse * param.dy * (param.representation.h / (Math.abs(param.representation.w == 1 ? 0 : param.representation.w) + Math.abs(param.representation.h == 1 ? 0 : param.representation.h)));
-							break;
-					}
-				}
-				
+		moteur.execItemsProperties();
+		
+		// gravité (hors spécial)
+		if (heros.canMove() && heros.isFalling()) {
+			heros.move('bas', event.delta);
+		}
+		
+		// Si espace alors activation (loot/item)
+		if (keyState[32]) {
+			heros.activate();
+		}
+		
+		// Gestion des déplacements via l'inertie du héros
+		if (heros.canMove()) {
+			if (keyState[37] || keyState[65]) {
+				if (heros.inertie > -1 * config.limites.inertie) heros.inertie -= 0.5; 
+			} else {
+				if (heros.inertie < 0) heros.inertie += 0.5; 
 			}
-		});
-		
-		// gravité
-		heros.move('bas', event.delta);
-		
-		if (keyState[37] || keyState[65]) {
+			if (keyState[39] || keyState[68]) {
+				if (heros.inertie < config.limites.inertie) heros.inertie += 0.5;
+			} else {
+				if (heros.inertie > 0) heros.inertie -= 0.5; 
+			}
 			heros.move('gauche', event.delta);
-			//heros.x -= event.delta/1000 * 60 * config.vitesse.deplacement;
-			//heros.rotation -= 5;
-			// TODO: animation rotate en même temps que bouge
-		}
-		if (keyState[39] || keyState[68]) {
 			heros.move('droite', event.delta);
-			//heros.rotation += 5;
 		}
 		
-		if (keyState[38] && heros.canJump()) {
+		// Gestion du saut
+		if (!heros.isFalling() && !moteur.waitJump() && keyState[38]) {
 			moteur.initJump();
+			heros.nuancier_saut = 0;
 		}
-		if (heros.isJumping()) {
+		if (heros.canMove() && heros.isJumping()) {
+			if (keyState[38]) heros.nuancier_saut++;
+			
 			moteur.animateJump();
 			heros.move('haut', event.delta);
 		}
 		
-		if (heros.canShift() && keyState[40]) {
+		// Gestion du changement de forme
+		if (keyState[16] && heros.canShift()) {
+			moteur.initShift();
+		}
+		if (heros.isShifting()) {
 			moteur.animateShift();
 		}
+		
+		// Gestion du spécial
+		if (keyState[40] && heros.canSpecial()) {
+			heros.hold_special = 0;
+			moteur.initSpecial();
+		}
+		if (heros.isUsingSpecial()) {
+			if (!keyState[40]) heros.hold_special = null;
+			if (heros.hold_special != null) { 
+				if (keyState[37]) heros.hold_special = -1;
+				if (keyState[39]) heros.hold_special = 1;
+				if (keyState[37] && keyState[39] || !keyState[37] && !keyState[39]) heros.hold_special = 0;
+			}
+			moteur.animateSpecial(event.delta);
+		}
+		
+		// Gestion de l'inactivité
+		if (!heros.isMoving()) {
+			heros.shapeAnimation('wait');
+		}
 	}
-
+	
+	// Gestion mécanique du changement d'écran
 	if (!heros.isSwitching() && heros.isOutOfBounds()) {
 		var exists = monde.ecrans.some(function(obj_e) {
-			var e = new Ecran(obj_e.nom, obj_e.position.x, obj_e.position.y, obj_e.plateformes, obj_e.decors, obj_e.loots);
-			
+			var e = new Ecran(0, obj_e.nom, obj_e.position.x, obj_e.position.y, obj_e.plateformes, obj_e.decors, obj_e.loots, obj_e.ennemis);
 			if (ecran.isAdjacentTo(e) == heros.getSwitchDir()) {
 				ecran = e;
 				moteur.initSwitch();
+				moteur.initTriggers();
 				return true;
 			}
 		});
 		
 		if (!exists) heros.setSwitchDir(undefined);
 	}
+	
+	// TEST MULTI
+	// sendDataToOthers({ x: heros.shape.x, y: heros.shape.y });
 
 	frames++;
+	// Ajustement de la position du héros pour éviter supperposition
+	heros.adjustPosition('gauche');
+	heros.adjustPosition('droite');
+	heros.adjustPosition('bas');
 	stage.update(event);
 }

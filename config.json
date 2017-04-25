@@ -1,12 +1,12 @@
 {
 	"depart": 
 	{
-		"monde": "Monde1",
-		"ecran": "Ecran1",
+		"monde": "Tutorial1",
+		"ecran": "Tuto_Ecran1",
 		"pt": 
 		{
-			"x": 395,
-			"y": 290
+			"x": 100,
+			"y": 450
 		}
 	},
 	"taille": 
@@ -17,15 +17,35 @@
 	"vitesse": 
 	{
 		"chute": 4, 
-		"saut": 8, 
+		"saut": 10, 
 		"deplacement": 3
+	},
+	"limites":
+	{
+		"inertie": 10,
+		"nuancier": 
+		[
+			{ 
+				"nb_frames": 7, 
+				"ralentissement": 0.15,
+				"recovery": 15 
+			},
+			{ 
+				"nb_frames": 20,
+				"ralentissement": 0.1,
+				"recovery": 20
+			}
+		]
+		
 	},
 	"recovery": 
 	{
-		"jump": 20,
-		"wait_jump": 10,
+		"wait_jump": 5,
 		"shift": 60,
-		"switch": 60
+		"switch": 60,
+		"death": 60,
+		"use": 30,
+		"activate": 30
 	},
 	"item": 
 	{
@@ -33,30 +53,73 @@
 		[
 			"plateforme", 
 			"loot", 
-			"decor"
+			"decor",
+			"ennemi"
 		],
 		"proprietes": 
 		{
 			"plateforme": 
 			{
-				"mouvement": {"representation": true}, 
-				"disparition": {"representation": false}, 
-				"animation": {"representation": true}
+				"mouvement": {"representation": true, "img": "Mouvement.png", 
+					"configurable": [
+						{"name": "vitesse", "format": "number", "defaut": 3}, 
+						{"name": "trigger", "format": "boolean", "options": ["collision", "point"]}
+					]
+				}, 
+				"rotation": {"representation": true, "img": "Rotation.png", 
+					"configurable": [
+						{"name": "vitesse", "format": "number", "defaut": 3}, 
+						{"name": "trigger", "format": "boolean", "options": ["collision", "point"]}
+					]
+				}, 
+				"disparition": {"representation": false, "img": "Disparition.png", 
+					"configurable": [
+						{"name": "duree", "format": "number", "defaut": 60}
+					]
+				}, 
+				"traversable": {"representation": true, "img": "Traversable.png"},
+				"destructible": {"representation": true, "img": "Destructible.png"}
 			},
 			"loot": 
 			{
-				"effet": {"representation": false, "activation": ["instant", "delayed", "triggered"]}, 
-				"ramassable": {"representation": false}, 
-				"utilisable": {"representation": false}
+				"effet": {"representation": false, "img": "Effet.png", 
+					"configurable": [
+						{"name": "activation", "format": "boolean", "options": ["instant", "delayed", "triggered"]}
+					]
+				}, 
+				"ramassable": {"representation": false, "img": "Ramassable.png"}, 
+				"utilisable": {"representation": false, "img": "Utilisable.png"},
+				"sauve": {"representation": true, "img": "Sauve.png"}
 			},
 			"decor": 
 			{
-				"defilement": {"representation": false}, 
-				"disparition": {"representation": false}, 
-				"animation": {"representation": false}
+				"defilement": {"representation": true, "img": "Defilement.png", 
+					"configurable": [
+						{"name": "vitesse", "format": "number", "defaut": 1}
+					]
+				},
+				"texte": {"representation": true, "img": "Texte.png", 
+					"configurable": [
+						{"name": "contenu", "format": "text", "defaut": ""}
+					]
+				}
+			},
+			"ennemi":
+			{
+				"mouvement": {"representation": true, "img": "Mouvement.png", 
+					"configurable": [
+						{"name": "vitesse", "format": "number", "defaut": 3}, 
+						{"name": "trigger", "format": "boolean", "options": ["collision", "point"]}
+					]
+				}
 			}
 		}
 	},
+	"sprites": 
+	[
+		{"nom": "Levier", "nb_img": 3, "w": 140, "h": 126},
+		{"nom": "Sauve", "nb_img": 2, "w": 100, "h": 100}
+	],
 	"palette": 
 	{
 		"noir": ["#000000", "#111111", "#222222", "#333333", "#444444"], 

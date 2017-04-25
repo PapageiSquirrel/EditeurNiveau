@@ -10,7 +10,7 @@ function createEcran() {
 		
 		clearCanvas();
 		
-		var new_ecran = new Ecran(name);
+		var new_ecran = new Ecran(monde.ecrans.length, name);
 		//var new_ecran = name, 'position': {'x': undefined, 'y': undefined}, 'plateformes': [], 'decors': [], 'loots': []};
 		monde.ecrans.push(new_ecran);
 		ecran = new_ecran;
@@ -52,7 +52,7 @@ function createEcranOnCanvas(index) {
 	clearCanvas();
 	
 	var obj_e = monde.ecrans[index];
-	ecran = new Ecran(obj_e.nom, obj_e.position.x, obj_e.position.y, obj_e.plateformes, obj_e.decors, obj_e.loots);
+	ecran = new Ecran(index, obj_e.nom, obj_e.position.x, obj_e.position.y, obj_e.plateformes, obj_e.decors, obj_e.loots, obj_e.ennemis);
 	
 	if (mode == 'edit') loadEcranOnCanvas();
 }
@@ -67,12 +67,7 @@ function loadEcranOnCanvas() {
 	
 	config.item.type.forEach(function(type) {
 		ecran[type+"s"].forEach(function(item) {
-			var props = [];
-			for (prop in item.proprietes) {
-				if (item.proprietes && item.proprietes[prop] && item.proprietes[prop].representation) props.push(createItemProp(type, prop, item.proprietes[prop].representation).obj);
-			}
-
-			items_edit[type].push({ param: item, obj: createItem(stage, type, item), proprietes: props }); // param = {x: pf.x, y: pf.y, w: pf.w, h: pf.h} + ?
+			items_edit[type].push(createItem(stage, type, item));
 		});
 	});
 	
@@ -83,8 +78,6 @@ function loadEcranOnCanvas() {
 
 function changeEcranPosition() {
 	ecran.changePosition(new Number(document.getElementById("positionX").value), new Number(document.getElementById("positionY").value));
-	//ecran.position.x = new Number(document.getElementById("positionX").value);
-	//ecran.position.y = new Number(document.getElementById("positionY").value);
 	
 	loadAdjacentEcranCanvas();
 }
@@ -98,7 +91,7 @@ function loadAdjacentEcranCanvas() {
 
 		for(var i = 0; i < monde.ecrans.length ; i++) {
 			var obj_e = monde.ecrans[i];
-			var e = new Ecran(obj_e.nom, obj_e.position.x, obj_e.position.y, obj_e.plateformes, obj_e.decors, obj_e.loots);
+			var e = new Ecran(i, obj_e.nom, obj_e.position.x, obj_e.position.y, obj_e.plateformes, obj_e.decors, obj_e.loots);
 			
 			var dir = ecran.isAdjacentTo(e);
 			if (dir) createCanvasOfAdjacentEcran(i, e, dir);
@@ -192,14 +185,19 @@ function createCanvasOfAdjacentEcran(index, e, dir) {
 			switch(dir) {
 				case 'haut':
 				case 'bas':
-					new_param = {'x': item.x, 'y': item.y/4, 'w': item.w, 'h': item.h/4, 'couleur': item.couleur, 'sprite': item.sprite}
+					new_param = {'x': item.x, 'y': item.y/4, 'w': item.w, 'h': item.h/4, 'couleur': item.couleur}
+					if (item.sprite) new_param.sprite = item.sprite;
+					if (item.proprietes) new_param.proprietes = item.proprietes;
 					break;
 				case 'gauche':
 				case 'droite':
-					new_param = {'x': item.x/4, 'y': item.y, 'w': item.w/4, 'h': item.h, 'couleur': item.couleur, 'sprite': item.sprite}
+					new_param = {'x': item.x/4, 'y': item.y, 'w': item.w/4, 'h': item.h, 'couleur': item.couleur}
+					if (item.sprite) new_param.sprite = item.sprite;
+					if (item.proprietes) new_param.proprietes = item.proprietes;
 					break;
 			}
-			createItem(stage_adjacents[dir], type, new_param);
+			
+			createItem(stage_adjacents[dir], type, new_param, false);
 		});
 	});
 

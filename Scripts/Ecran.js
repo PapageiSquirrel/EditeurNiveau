@@ -1,9 +1,11 @@
-function Ecran(nom, pos_x=undefined, pos_y=undefined, pfs=[], decors=[], loots=[]) {
+function Ecran(index, nom, pos_x=undefined, pos_y=undefined, pfs=[], decors=[], loots=[], ennemis=[]) {
 	this.nom = nom;
 	this.position = {'x': pos_x, 'y': pos_y};
 	this.plateformes = pfs;
 	this.decors = decors;
 	this.loots = loots;
+	this.ennemis = ennemis;
+	this.index = index;
 }
 
 Ecran.prototype.addItem = function(type, item) {
@@ -11,13 +13,40 @@ Ecran.prototype.addItem = function(type, item) {
 }
 
 Ecran.prototype.save = function(items) {
+	var ecran_sauve = this;
+	
 	config.item.type.forEach(function(type) {
-		this[type+"s"] = new Array();
+		ecran_sauve[type+"s"] = new Array();
 		
 		items[type].forEach(function(item) {
-			this[type+"s"].push(item.param);
+			var item_param_clone = {};
+			
+			for (p in item.param) {
+				if (item.param.proprietes && p == "proprietes") {
+					item_param_clone[p] = {};
+					for (prop in item.param[p]) {
+						if (item.param[p][prop]) {
+							item_param_clone[p][prop] = {};
+							if (item.param[p][prop].representation) {
+								item_param_clone[p][prop].representation = JSON.parse(JSON.stringify(item.param[p][prop].representation.param));
+							}
+							
+							for (va in item.param[p][prop]) {
+								if (va != "representation") {
+									item_param_clone[p][prop][va] = JSON.parse(JSON.stringify(item.param[p][prop][va]));
+								}
+							}
+						}
+					}
+				} else {
+					item_param_clone[p] = item.param[p] != undefined ? JSON.parse(JSON.stringify(item.param[p])) : undefined;
+				}
+			}
+			ecran_sauve[type+"s"].push(item_param_clone);
 		});
 	});
+	
+	monde.ecrans[ecran_sauve.index] = ecran_sauve;
 }
 
 Ecran.prototype.changePosition = function(x, y) {

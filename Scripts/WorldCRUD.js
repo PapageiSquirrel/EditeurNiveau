@@ -9,9 +9,19 @@ function createWorld() {
 }
 
 function saveWorld() {
-	ecran.save(items_edit);
-	
-	sendData(monde.nom + '.json', monde);
+	try {
+		ecran.save(items_edit);
+		
+		monde.ecrans.forEach(function(e) {
+			config.item.type.forEach(function(type) {
+				if (!e[type+"s"]) e[type+"s"] = [];
+			});
+		});
+		
+		sendData(monde.nom + '.json', monde);
+	} catch (e) {
+		console.log(e);
+	}
 }
 
 function loadExistingWorlds() {
@@ -57,13 +67,15 @@ function createWorldOnCanvas() {
 	if (mode == 'edit') document.getElementById("path").innerHTML = monde.nom + " > Aucun ecran";
 	
 	if (monde.ecrans.length != 0) {
-		// TODO: charger l'écran dont la position est sauvegardé, sinon default (0)
-		createEcranOnCanvas(0);
-		
 		if (mode == 'edit') {
+			createEcranOnCanvas(0);
 			loadExistingEcrans();
 		} else if (mode == 'game') {
+			// TODO: charger l'écran dont la position est sauvegardé, sinon default (0)
 			items_game = loadWorldOnCanvas();
+			
+			var obj_e = monde.ecrans[0];
+			ecran = new Ecran(0, obj_e.nom, obj_e.position.x, obj_e.position.y, obj_e.plateformes, obj_e.decors, obj_e.loots, obj_e.ennemis);
 		}
 	} else {
 		clearCanvas();
@@ -123,17 +135,34 @@ function loadWorldOnCanvas() {
 	
 	monde.ecrans.forEach(function(e) {
 		if (e.position.x != undefined && e.position.y != undefined) {
+			e.position.x -= lim_x.min;
+			e.position.y -= lim_y.min;
+			
 			items_return[e.nom] = {};
 			config.item.type.forEach(function(type) {
 				items_return[e.nom][type] = [];
-				e[type+"s"].forEach(function(item) {
-					var new_param = {
-						'x': (e.position.x - lim_x.min) * config.taille.w + item.x, 
-						'y': (e.position.y - lim_y.min) * config.taille.h + item.y, 
-						'w': item.w, 'h': item.h, 'couleur': item.couleur, 'sprite': item.sprite , 'proprietes': item.proprietes};
-					
-					items_return[e.nom][type].push({ param: new_param, obj: createItem(stage, type, new_param) });
-				});
+				if (e[type+"s"] !== undefined) {
+					e[type+"s"].forEach(function(item) {
+						var new_param = {
+							'x': e.position.x * config.taille.w + item.x, 
+							'y': e.position.y * config.taille.h + item.y, 
+							'w': item.w, 'h': item.h, 'couleur': item.couleur 
+						};
+						
+						if (item.sprite) new_param.sprite = item.sprite;
+						if (item.proprietes) new_param.proprietes = item.proprietes;
+						
+						if (mode == "game") {
+							var new_item = createItem(stage, type, new_param);
+							items_return[e.nom][type].push(new_item);
+							// console.log(new_item.obj.getBounds());
+							var bounds = new_item.obj.getBounds();
+							new_item.obj.cache(bounds.x, bounds.y, bounds.width, bounds.height); 
+						} else {
+							items_return[e.nom][type].push(createItem(stage, type, new_param));
+						}
+					});
+				}
 			});
 		}
 	});

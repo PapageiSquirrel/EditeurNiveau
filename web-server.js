@@ -40,7 +40,10 @@ server.listen(1000);
 
 var listener = io.listen(server);
 
-listener.sockets.on('connection', function(socket){
+var client_sockets = [];
+listener.sockets.on('connection', function(socket) {
+	client_sockets.push(socket);
+	
 	socket.on('json_data', function(data) {
 		// Write json into file		
 		fs.writeFile('JSON/' + data.nom, JSON.stringify(data.json), function (err) {
@@ -54,5 +57,29 @@ listener.sockets.on('connection', function(socket){
 		fs.readdir(data.path, function(err, files) {
 			callback(files);
 		});
+	});
+	
+	socket.on('get_dirs', function(data, callback) {
+		fs.readdir(data.path, function(err, dirs) {
+			var files = {};
+			if (dirs && dirs[0] )
+			dirs.forEach(function(dir) {
+				files[dir] = fs.readdirSync(path.join(data.path, dir));
+			});
+			callback(files);
+		});
+	});
+	
+	socket.on('heros_data', function(data) {
+		if (client_sockets.length > 1) socket.broadcast.emit('loc_autres', {'id': client_sockets.indexOf(socket), 'location': data.location });
+	});
+	
+	socket.on('disconnect', function() {
+		var i = client_sockets.indexOf(socket);
+		client_sockets.splice(i, 1);
+		
+		if (client_sockets.length > 1) {
+			socket.broadcast.emit('disconnect', {'id': i});
+		}
 	});
 });
