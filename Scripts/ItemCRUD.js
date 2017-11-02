@@ -92,6 +92,41 @@ function loadSpriteBank(callback) {
 	});
 }
 
+function loadUI(callback) {
+	var path = "img/ui/";
+	
+	getListFiles(path, function(list) {
+		var manifest_body = [];
+
+		for(var i = 0 ; i < list.length ; i++) {
+			var id = list[i].slice(0, list[i].indexOf("."));
+			manifest_body.push({"id": id, "src": list[i]});
+		}
+		
+		callback({"path": path, "manifest": manifest_body});
+	});
+}
+
+function loadMusics(callback) {
+	var path = "musics/";
+	
+	getListFilesInSubdir(path, function(list) {
+		var manifest_body = [];
+
+		for (format in list) {
+			musics[format] = {};
+			for(var i = 0 ; i < list[format].length ; i++) {
+				var id = list[format][i].slice(0, list[format][i].indexOf("."));
+				musics[format][id] = id + format;
+				manifest_body.push({"id": id + format, "src": format + '/' + list[format][i]});
+			}
+		}
+		
+		callback({"path": path, "manifest": manifest_body});
+	});
+}
+
+
 function deleteAjustmentVariables() {
 	var div = document.getElementById("varaju");
 	if (div.childElementCount > 0) {

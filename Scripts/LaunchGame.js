@@ -1,11 +1,11 @@
 // GLOBALES
-var keyState, fpsLabel;
+var keyState, fpsLabel, current_music, selected_format;
 // SPRITES
-var moteur, heros, monde, ecran, items_game;
+var moteur, menu, heros, monde, ecran, items_game;
 // ETATS
-var started, jump, collision, shift, wait_jump;
+var started, collision;
 // FRAMES
-var frames, jump_frame, jump_nb_frames, wait_jump_frame, wait_jump_nb_frames, shift_frame, shift_nb_frames;
+var frames;
 // MULTI
 var autres;
 
@@ -14,32 +14,29 @@ function initGame() {
 	keyState = {};
 	frames = 0;
 	started = false;
-
-	jump = false;
-	jump_frame = 0;
-	
-	wait_jump = false
-	wait_jump_frame = 0;
-	
-	shift = false;
-	shift_frame = 0;
+	current_music = 'TS2';
+	selected_format = 'ogg';
 	
 	autres = [];
+
+	collision = {};
+	for (dir in direction) {
+		collision[direction[dir]] = false;
+	}
 	
-	/*
-	switching = { 'bas': false, 'haut': false, 'gauche': false, 'droite': false };
-	switch_frame = 0;
-	*/
-	
-	//pts_coll_heros = { 'bas': {'x': 0, 'y': 10}, 'haut': {'x': 0, 'y': -10}, 'gauche': {'x': -10, 'y': 0}, 'droite': {'x': 10, 'y': 0}};
-	collision = { 'bas': false, 'haut': false, 'gauche': false, 'droite': false };
 	items_game = {};
 
+	menu = new Menu();
 	heros = new Heros();
 	moteur = new MoteurPhysique(stage, heros);
 	// FIN INIT
 
-	loadWorld(config.depart.monde);
+	menu.open(menuMode.Start);
+	ui = new UI();
+	menu.startNewGame();
+	// playMusic(selected_format);
+	
+	// loadWorld(config.depart.monde);
 }
 
 function initGameHandler() {
@@ -53,7 +50,6 @@ function initGameHandler() {
 	
 	moteur.initTriggers();
 	moteur.initItemsLinks();
-	started = true;	
 	
 	fpsLabel = new createjs.Text("-- fps", "bold 18px Arial", "#FFF");
 	stage.addChild(fpsLabel);
@@ -74,8 +70,14 @@ function initGameHandler() {
 
 function handleTick(event) {
 	fpsLabel.text = Math.round(createjs.Ticker.getMeasuredFPS()) + " fps";
-	// Mort du héros
-	if (heros.isRespawning()) {
+	
+	// Menu ouvert
+	if (menu.isOpen) {
+		if (keyState[13]) {
+			menu.close();
+		}
+	// Mort du héros	
+	} else if (heros.isRespawning()) {
 		moteur.animateDeath();
 	// Changement d'écran du héros
 	} else if (heros.isSwitching()) {
@@ -85,11 +87,19 @@ function handleTick(event) {
 		moteur.execItemsProperties();
 		
 		// gravité (hors spécial)
-		if (heros.canMove() && heros.isFalling()) {
-			heros.move('bas', event.delta);
+		if (heros.canMove()) {
+			heros.move(direction.Bas, event.delta);
 		}
 		
-		// Si espace alors activation (loot/item)
+		// Gestion de l'accélération de la chute
+		if (heros.isFalling()) {
+			heros.fallAcceleration += 0.05;
+			moteur.activate('wait_jump');
+		} else {
+			heros.fallAcceleration = 0;
+		}
+		
+		// Si espace alors activation (loot/item/sauvegarde/...)
 		if (keyState[32]) {
 			heros.activate();
 		}
@@ -97,43 +107,27 @@ function handleTick(event) {
 		// Gestion des déplacements via l'inertie du héros
 		if (heros.canMove()) {
 			if (keyState[37] || keyState[65]) {
-				if (heros.inertie > -1 * config.limites.inertie) heros.inertie -= 0.5; 
+				if (heros.inertie > -1 * config.limites.inertie) heros.inertie -= 1; 
 			} else {
-				if (heros.inertie < 0) heros.inertie += 0.5; 
+				if (heros.inertie < 0) heros.inertie += 0.5;
 			}
 			if (keyState[39] || keyState[68]) {
-				if (heros.inertie < config.limites.inertie) heros.inertie += 0.5;
+				if (heros.inertie < config.limites.inertie) heros.inertie += 1;
 			} else {
-				if (heros.inertie > 0) heros.inertie -= 0.5; 
+				if (heros.inertie > 0) heros.inertie -= 0.5;
 			}
-			heros.move('gauche', event.delta);
-			heros.move('droite', event.delta);
-		}
-		
-		// Gestion du saut
-		if (!heros.isFalling() && !moteur.waitJump() && keyState[38]) {
-			moteur.initJump();
-			heros.nuancier_saut = 0;
-		}
-		if (heros.canMove() && heros.isJumping()) {
-			if (keyState[38]) heros.nuancier_saut++;
 			
-			moteur.animateJump();
-			heros.move('haut', event.delta);
-		}
-		
-		// Gestion du changement de forme
-		if (keyState[16] && heros.canShift()) {
-			moteur.initShift();
-		}
-		if (heros.isShifting()) {
-			moteur.animateShift();
+			if (heros.inertie < 0) {
+				heros.move(direction.Gauche, event.delta);
+			} else if (heros.inertie > 0) {
+				heros.move(direction.Droite, event.delta);
+			}
 		}
 		
 		// Gestion du spécial
 		if (keyState[40] && heros.canSpecial()) {
 			heros.hold_special = 0;
-			moteur.initSpecial();
+			moteur.activate('special');
 		}
 		if (heros.isUsingSpecial()) {
 			if (!keyState[40]) heros.hold_special = null;
@@ -143,6 +137,26 @@ function handleTick(event) {
 				if (keyState[37] && keyState[39] || !keyState[37] && !keyState[39]) heros.hold_special = 0;
 			}
 			moteur.animateSpecial(event.delta);
+		}
+		
+		// Gestion du saut
+		if (!heros.isFalling() && !moteur.waitJump() && keyState[38]) {
+			moteur.activate('jump');
+			heros.nuancier_saut = 0;
+		}
+		if (heros.canMove() && heros.isJumping()) {
+			if (keyState[38]) heros.nuancier_saut++;
+			
+			moteur.animateJump();
+			heros.move(direction.Haut, event.delta);
+		}
+		
+		// Gestion du changement de forme
+		if (keyState[16] && heros.canShift()) {
+			moteur.activate('shift');
+		}
+		if (heros.isShifting()) {
+			moteur.animateShift();
 		}
 		
 		// Gestion de l'inactivité
@@ -157,7 +171,7 @@ function handleTick(event) {
 			var e = new Ecran(0, obj_e.nom, obj_e.position.x, obj_e.position.y, obj_e.plateformes, obj_e.decors, obj_e.loots, obj_e.ennemis);
 			if (ecran.isAdjacentTo(e) == heros.getSwitchDir()) {
 				ecran = e;
-				moteur.initSwitch();
+				moteur.activate('switch');
 				moteur.initTriggers();
 				return true;
 			}
@@ -166,13 +180,24 @@ function handleTick(event) {
 		if (!exists) heros.setSwitchDir(undefined);
 	}
 	
+	// MENUING
+	// Annuler Musique
+	if (keyState[8]) {
+		stopMusic();
+	}
+	if (keyState[27] && !menu.isOpen) {
+		menu.open(menuMode.jeu);
+	}
+	
 	// TEST MULTI
 	// sendDataToOthers({ x: heros.shape.x, y: heros.shape.y });
 
 	frames++;
 	// Ajustement de la position du héros pour éviter supperposition
-	heros.adjustPosition('gauche');
-	heros.adjustPosition('droite');
-	heros.adjustPosition('bas');
+	/*
+	heros.adjustPosition(direction.Gauche);
+	heros.adjustPosition(direction.Droite);
+	heros.adjustPosition(direction.Bas);
+	*/
 	stage.update(event);
 }

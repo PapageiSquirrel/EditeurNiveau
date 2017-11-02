@@ -67,7 +67,7 @@ function loadEcranOnCanvas() {
 	
 	config.item.type.forEach(function(type) {
 		ecran[type+"s"].forEach(function(item) {
-			items_edit[type].push(createItem(stage, type, item));
+			items_edit[type].push(createItem(ecran.layers[type+"s"], type, item));
 		});
 	});
 	

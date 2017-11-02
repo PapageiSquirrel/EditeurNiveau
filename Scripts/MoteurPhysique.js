@@ -2,12 +2,8 @@ function MoteurPhysique(stage, heros) {
 	this.stage = stage;
 	this.heros = heros;
 	
-	this.switch_frame = 0;
-	this.shift_frame = 0;
-	this.jump_frame = 0;
-	this.wait_jump_frame = 0;
-	this.special_frame = 0;
-	this.death_frame = 0;
+	this.frameCounters = {};
+	this.initFC();
 	
 	this.save_position = { 'monde': config.depart.monde, 'ecran': undefined, 'x': undefined, 'y': undefined };
 }
@@ -30,92 +26,97 @@ MoteurPhysique.prototype.save = function() {
 	this.save_position.y = ecran.position.y;
 }
 
-MoteurPhysique.prototype.initDeath = function() {
-	this.death_frame = 0;
-	this.heros.dead = true;
+MoteurPhysique.prototype.initFC = function() {
+	this.frameCounters['switch'] = new FrameCounter(config.recovery['switch']);
+	this.frameCounters['death'] = new FrameCounter(config.recovery['death']);
+	this.frameCounters['wait_jump'] = new FrameCounter(config.recovery['wait_jump']);
+	this.frameCounters['shift'] = new FrameCounter(config.recovery['shift'], function() {
+		heros.nextShape();
+		heros.shapeAnimation("shift", "start");
+	});
+	this.frameCounters['jump'] = new FrameCounter(config.limites.nuancier[0].recovery);
+	// Pas de recovery (pour le moment)
+	this.frameCounters['special'] = new FrameCounter(config.recovery['special'], function() {
+		moteur.frameCounters['jump'].reset();
+	});
+}
+
+MoteurPhysique.prototype.activate = function(action) {
+	var fc = this.frameCounters[action];
+	fc.activate();
 }
 
 MoteurPhysique.prototype.animateDeath = function() {
-	this.death_frame++;
+	var fc = this.frameCounters['death'];
+	fc.increment();
 	
-	if (this.death_frame >= config.recovery['death']) {
-		this.death_frame = 0;
-		
+	if (fc.isFirstFrame()) this.heros.shapeAnimation('die', 'start', fc.counter, fc.nb_frames);
+	else this.heros.shapeAnimation('die', 'step1', fc.counter, fc.nb_frames);
+	
+	if (fc.isLastFrame()) {
 		moteur.start();
 		heros.start();
 		
 		ecran = this.save_position.ecran;
 		
-		this.heros.dead = false;
+		this.heros.shapeAnimation('die', 'end');
+		
+		fc.reset();
 	}
-}
-
-MoteurPhysique.prototype.initSwitch = function() {
-	this.switch_frame = 0;
 }
 
 MoteurPhysique.prototype.animateSwitch = function() {
 	var dir = this.heros.getSwitchDir();
-	this.switch_frame++;
+	var fc = this.frameCounters['switch'];
+	fc.increment();
 	
 	switch(dir) {
-		case 'gauche':
-			this.stage.x += config.taille.w * config.pixel.w / config.recovery['switch'];
+		case direction.Gauche:
+			this.stage.x += config.taille.w * config.pixel.w / fc.nb_frames;
 			break;
-		case 'droite':
-			this.stage.x -= config.taille.w * config.pixel.w / config.recovery['switch'];
+		case direction.Droite:
+			this.stage.x -= config.taille.w * config.pixel.w / fc.nb_frames;
 			break;
-		case 'haut':
-			this.stage.y += config.taille.h * config.pixel.h / config.recovery['switch'];
+		case direction.Haut:
+			this.stage.y += config.taille.h * config.pixel.h / fc.nb_frames;
 			break;
-		case 'bas':
-			this.stage.y -= config.taille.h * config.pixel.h / config.recovery['switch'];
+		case direction.Bas:
+			this.stage.y -= config.taille.h * config.pixel.h / fc.nb_frames;
 			break;
 	}
 	
-	if (this.switch_frame >= config.recovery['switch']) {
-		this.switch_frame = 0;
+	if (fc.isLastFrame()) {
+		fc.reset();
 		this.heros.setSwitchDir(undefined);
 	}
 }
 
-MoteurPhysique.prototype.initJump = function() {
-	this.jump_frame = 0;
-	this.heros.jump = true;
-}
-
 MoteurPhysique.prototype.animateJump = function() {
-	this.jump_frame++;
-	var h = this.heros;
-	var m = this;
+	var fc = this.frameCounters['jump'];
+	fc.increment();
 	
-	var recovery_jump;
+	var h = this.heros;
+
 	config.limites.nuancier.some(function(ns) {
 		if (h.nuancier_saut <= ns.nb_frames) {
-			h.ralentissement = ns.ralentissement * m.jump_frame / ns.recovery;
-			recovery_jump = ns.recovery;
+			h.ralentissement = ns.ralentissement * fc.counter / ns.recovery;
+			fc.nb_frames = ns.recovery;
 			return true;
 		}
 	});
 	
-	if (this.jump_frame >= recovery_jump) {
-		this.heros.jump = false;
-		this.jump_frame = 0;
+	if (fc.isLastFrame()) {
+		fc.reset();
 	}
 }
 
-MoteurPhysique.prototype.initWaitJump = function() {
-	this.wait_jump_frame = 0;
-	this.heros.wait_jump = true;
-}
-
 MoteurPhysique.prototype.waitJump = function() {
-	if (this.heros.wait_jump) {
-		this.wait_jump_frame++;
+	var fc = this.frameCounters['wait_jump'];
+	if (fc.actif) {
+		fc.increment();
 	
-		if (this.wait_jump_frame >= config.recovery['wait_jump']) {
-			this.wait_jump_frame = 0;
-			this.heros.wait_jump = false;
+		if (fc.isLastFrame()) {
+			fc.reset();
 			return false;
 		} else {
 			return true;
@@ -186,7 +187,7 @@ MoteurPhysique.prototype.initItemsLinks = function() {
 		obj_to_test = item.obj;
 		pt_coll = {'x': obj_to_test.x + obj_to_test.graphics.command.w/2, 'y': obj_to_test.y + obj_to_test.graphics.command.h};
 
-		var item_coll = m.checkCollision(obj_to_test, pt_coll, 'bas', false);
+		var item_coll = m.checkCollision(obj_to_test, pt_coll, direction.Bas, false);
 		if (item_coll && item_coll.param.proprietes) {
 			for (p_name in item_coll.param.proprietes) {
 				if (p_name == "mouvement") {
@@ -260,7 +261,7 @@ MoteurPhysique.prototype.execPFMouvement = function(item, param_prop) {
 	if (coeff_directeur == undefined) {
 		item.obj.x += param_prop.vitesse * param_prop.sens;
 		
-		if (item.obj === this.heros.collision['bas']) this.heros.shape.x += param_prop.vitesse * param_prop.sens;
+		if (item.obj === this.heros.collision[direction.Bas]) this.heros.shape.x += param_prop.vitesse * param_prop.sens;
 		if (item.links) {
 			item.links.forEach(function(i) {
 				i.x += param_prop.vitesse * param_prop.sens;
@@ -269,7 +270,7 @@ MoteurPhysique.prototype.execPFMouvement = function(item, param_prop) {
 	} else if (coeff_directeur == 0) {
 		item.obj.y += param_prop.vitesse * param_prop.sens;
 		
-		if (item.obj === this.heros.collision['bas']) this.heros.shape.y += param_prop.vitesse * param_prop.sens;
+		if (item.obj === this.heros.collision[direction.Bas]) this.heros.shape.y += param_prop.vitesse * param_prop.sens;
 		if (item.links) {
 			item.links.forEach(function(i) {
 				i.y += param_prop.vitesse * param_prop.sens;
@@ -279,7 +280,7 @@ MoteurPhysique.prototype.execPFMouvement = function(item, param_prop) {
 		item.obj.x += param_prop.vitesse * param_prop.sens;
 		item.obj.y += param_prop.vitesse * param_prop.sens * coeff_directeur;
 		
-		if (item.obj === this.heros.collision['bas']) {
+		if (item.obj === this.heros.collision[direction.Bas]) {
 			this.heros.shape.x += param_prop.vitesse * param_prop.sens;
 			this.heros.shape.y += param_prop.vitesse * param_prop.sens * coeff_directeur;
 		}
@@ -293,7 +294,7 @@ MoteurPhysique.prototype.execPFMouvement = function(item, param_prop) {
 		item.obj.x += param_prop.vitesse * param_prop.sens;
 		item.obj.y += param_prop.vitesse * param_prop.sens / coeff_directeur;
 		
-		if (item.obj === this.heros.collision['bas']) {
+		if (item.obj === this.heros.collision[direction.Bas]) {
 			this.heros.shape.x += param_prop.vitesse * param_prop.sens;
 			this.heros.shape.y += param_prop.vitesse * param_prop.sens / coeff_directeur;
 		}
@@ -339,7 +340,7 @@ MoteurPhysique.prototype.execImgDefilement = function(item, param_prop) {
 MoteurPhysique.prototype.checkCollision = function(obj_obs, pts, dir, onlyObj=true) {
 	var res;
 	res = this.checkCollisionByType(obj_obs, pts, dir, onlyObj, 'ennemi');
-	if (res) this.heros.dead = true;
+	if (res) this.activate('death');
 	
 	res = this.checkCollisionByType(obj_obs, pts, dir, onlyObj, 'plateforme');
 	return res;
@@ -412,57 +413,45 @@ MoteurPhysique.prototype.timeSpent = function(t) {
 	return (t / 1000 * 60);
 }
 
-MoteurPhysique.prototype.initShift = function() {
-	this.heros.shifting = true;
-	this.shift_frame = 0;
-	
-	this.heros.nextShape();
-	this.heros.shapeAnimation("shift", "start");
-}
-
 MoteurPhysique.prototype.animateShift = function() {
-	this.shift_frame++;
+	var fc = this.frameCounters['shift'];
+	fc.increment();
 	
-	if (this.shift_frame == config.recovery['shift'] /2) {
+	if (fc.counter == fc.nb_frames /2) {
 		this.heros.shapeAnimation("shift", "next");
 		this.heros.shapeShift();
-	} else if (this.shift_frame < config.recovery['shift'] /2) {
-		this.heros.shapeAnimation("shift", "step1", this.shift_frame+1, config.recovery['shift'] /2);
-	} else if (this.shift_frame == config.recovery['shift']) {
-		this.heros.shapeAnimation("shift", "step2", this.shift_frame - config.recovery['shift'] /2, config.recovery['shift'] /2);
+	} else if (fc.counter < fc.nb_frames /2) {
+		this.heros.shapeAnimation("shift", "step1", fc.counter+1, fc.nb_frames /2);
+	} else if (fc.counter == fc.nb_frames) {
+		this.heros.shapeAnimation("shift", "step2", fc.counter - fc.nb_frames /2, fc.nb_frames /2);
 		this.heros.shapeAnimation("shift", "end");
-	} else if (this.shift_frame > config.recovery['shift'] /2) {
-		this.heros.shapeAnimation("shift", "step2", this.shift_frame - config.recovery['shift'] /2, config.recovery['shift'] /2);
+	} else if (fc.counter > fc.nb_frames /2) {
+		this.heros.shapeAnimation("shift", "step2", fc.counter - fc.nb_frames /2, fc.nb_frames /2);
 	}
 	
-	if (this.shift_frame >= config.recovery['shift']) {
-		this.heros.shifting = false;
-		this.shift_frame = 0;
+	if (fc.isLastFrame()) {
+		playMusic(selected_format);
+		
+		fc.reset();
 	}
-}
-
-MoteurPhysique.prototype.initSpecial = function() {
-	this.heros.special = true;
-	this.special_frame = 0;
-	
-	this.heros.jump = false;
 }
 
 MoteurPhysique.prototype.animateSpecial = function(t) {
-	this.special_frame++;
+	var fc = this.frameCounters['special'];
+	fc.increment();
 	
 	if (this.heros.forme == "carre") {
-		if (this.special_frame <= 15) {
+		if (fc.counter <= 15) {
 			this.heros.shapeAnimation("special", "prepare");
 		} else {
-			this.heros.acceleration = 3;
-			this.heros.move('bas', t);
+			this.heros.fallAcceleration = 3;
+			this.heros.move(direction.Bas, t);
 			this.heros.shapeAnimation("special", "go");
-			var item_coll = this.checkCollision(this.heros.shape, this.heros.pts_coll[this.heros.forme]['bas'], 'bas', false);
+			var item_coll = this.checkCollision(this.heros.shape, this.heros.pts_coll[this.heros.forme][direction.Bas], direction.Bas, false);
 			
 			if (item_coll) {
-				this.heros.collision['bas'] = item_coll.obj;
-				this.heros.acceleration = 0;
+				this.heros.collision[direction.Bas] = item_coll.obj;
+				this.heros.fallAcceleration = 0;
 				
 				if (item_coll.param.proprietes && item_coll.param.proprietes.destructible) {
 					try {
@@ -471,33 +460,41 @@ MoteurPhysique.prototype.animateSpecial = function(t) {
 						console.log(e);
 					}
 				}
-				this.heros.special = false;
-				this.special_frame = 0;
-				this.heros.adjustPosition('bas');
+				fc.reset();
+				this.heros.adjustPosition(direction.Bas);
 			}
 		}
 	} else if (this.heros.forme == "rond") {
 		if (this.heros.hold_special != null) {
 			if (this.heros.hold_special == 0) {
 				//this.heros.inertie = 0;
-			} else if (this.heros.hold_special == 1 && this.heros.inertie < 60) {
+			} else if (this.heros.hold_special == 1 && this.heros.inertie < 40) {
 				this.heros.inertie += 2;
 				this.heros.shapeAnimation("special", "prepare");
-			} else if (this.heros.hold_special == -1 && this.heros.inertie > -60) {
+			} else if (this.heros.hold_special == -1 && this.heros.inertie > -40) {
 				this.heros.inertie -= 2;
 				this.heros.shapeAnimation("special", "prepare");
 			}
 		} else {
-			this.heros.move('gauche', t);
+			if (heros.inertie < 0) {
+				heros.move(direction.Gauche, t);
+				this.heros.collision[direction.Droite] = undefined;
+			} else if (heros.inertie > 0) {
+				heros.move(direction.Droite, t);
+				this.heros.collision[direction.Gauche] = undefined;
+			}
 			
 			if (this.heros.inertie > 0) this.heros.inertie--;
 			else this.heros.inertie++;
 			
 			this.heros.shapeAnimation("special", "go");
 			
-			if (this.heros.inertie == 0 || this.heros.collision['gauche'] || this.heros.collision['droite']) {
-				this.heros.special = false;
-				this.special_frame = 0;
+			if (this.heros.inertie < 1 && this.heros.inertie > -1) this.heros.inertie = 0;
+			
+			if (this.heros.inertie == 0 || this.heros.collision[direction.Gauche] || this.heros.collision[direction.Droite]) {
+				this.heros.inertie = 0
+				this.heros.shapeAnimation("special", "stop");
+				fc.reset();
 			}
 		}
 	} else if (this.heros.forme == "triangle") {
@@ -509,7 +506,7 @@ MoteurPhysique.prototype.animateSpecial = function(t) {
 				this.heros.shapeAnimation("special", "ready");
 			}
 		} else {
-			this.heros.move('haut', t);
+			this.heros.move(direction.Haut, t);
 			
 			this.heros.shapeAnimation("special", "go");
 			
@@ -517,8 +514,7 @@ MoteurPhysique.prototype.animateSpecial = function(t) {
 			
 			if (this.heros.vitesse_saut <= config.vitesse.saut) {
 				this.heros.vitesse_saut = config.vitesse.saut;
-				this.heros.special = false;
-				this.special_frame = 0;
+				fc.reset();
 			}
 		}
 	}

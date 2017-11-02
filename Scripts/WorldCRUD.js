@@ -140,6 +140,9 @@ function loadWorldOnCanvas() {
 			
 			items_return[e.nom] = {};
 			config.item.type.forEach(function(type) {
+				var container = new createjs.Container();
+				stage.addChild(container);
+				
 				items_return[e.nom][type] = [];
 				if (e[type+"s"] !== undefined) {
 					e[type+"s"].forEach(function(item) {
@@ -153,13 +156,12 @@ function loadWorldOnCanvas() {
 						if (item.proprietes) new_param.proprietes = item.proprietes;
 						
 						if (mode == "game") {
-							var new_item = createItem(stage, type, new_param);
+							var new_item = createItem(container, type, new_param);
 							items_return[e.nom][type].push(new_item);
-							// console.log(new_item.obj.getBounds());
 							var bounds = new_item.obj.getBounds();
 							new_item.obj.cache(bounds.x, bounds.y, bounds.width, bounds.height); 
 						} else {
-							items_return[e.nom][type].push(createItem(stage, type, new_param));
+							items_return[e.nom][type].push(createItem(container, type, new_param));
 						}
 					});
 				}

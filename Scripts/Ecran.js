@@ -6,6 +6,18 @@ function Ecran(index, nom, pos_x=undefined, pos_y=undefined, pfs=[], decors=[], 
 	this.loots = loots;
 	this.ennemis = ennemis;
 	this.index = index;
+	
+	this.layers = {	
+		'decors':  new createjs.Container(), 
+		'plateformes': new createjs.Container(), 
+		'loots': new createjs.Container(), 
+		'ennemis': new createjs.Container(),
+		'ui': new createjs.Container()
+	};
+	
+	for (l in this.layers) {
+		stage.addChild(this.layers[l]);
+	}
 }
 
 Ecran.prototype.addItem = function(type, item) {

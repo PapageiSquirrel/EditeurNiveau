@@ -18,7 +18,7 @@
 	{
 		"chute": 4, 
 		"saut": 10, 
-		"deplacement": 3
+		"deplacement": 4
 	},
 	"limites":
 	{
@@ -27,12 +27,12 @@
 		[
 			{ 
 				"nb_frames": 7, 
-				"ralentissement": 0.15,
+				"ralentissement": 0.2,
 				"recovery": 15 
 			},
 			{ 
 				"nb_frames": 20,
-				"ralentissement": 0.1,
+				"ralentissement": 0.08,
 				"recovery": 20
 			}
 		]

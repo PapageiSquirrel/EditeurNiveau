@@ -1,15 +1,32 @@
-var stage, preload, sprites, config;
+var stage, preload, ui, sprites, musics, config;
 var monde, ecran, items;
 
 function init() {
 	sprites = {};
+	musics = {};
+	ui = {};
 	
 	preload = new createjs.LoadQueue(false);
+	preload.loadFile({id: "config", src: "config.json"});
+	
 	loadSpriteBank(function(manifest) {
 		preload.loadManifest(manifest);
-		preload.loadFile({id: "config", src: "config.json"});
 		
-		preload.on("complete", handlePreload, this);
+		if (ui != {} && musics != {}) preload.on("complete", handlePreload, this);
+	});
+	
+	loadMusics(function(manifest) {
+		preload.installPlugin(createjs.Sound);
+		preload.loadManifest(manifest);
+		
+		if (ui != {} && sprites != {}) preload.on("complete", handlePreload, this);
+	});
+	
+	loadUI(function(manifest) {
+		preload.loadManifest(manifest);
+		console.log(manifest);
+		
+		if (sprites != {} && musics != {}) preload.on("complete", handlePreload, this);
 	});
 }
 

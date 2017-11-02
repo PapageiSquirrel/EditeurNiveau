@@ -37,6 +37,7 @@ function getFilename(request, response)
 
 var server = http.createServer(getFilename);
 server.listen(1000);
+console.log("Serveur disponible : http://localhost:1000/ShapeShifter.html");
 
 var listener = io.listen(server);
 
