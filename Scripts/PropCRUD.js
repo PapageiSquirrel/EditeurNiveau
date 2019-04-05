@@ -79,12 +79,12 @@ function createText(st, x, y, w, h, couleur, tx) {
 }
 
 function createLine(st, x1, y1, x2, y2) {
-	var line = new createjs.Shape();
-	
-	line.graphics.setStrokeStyle(2);
-	line.graphics.beginStroke("#0000FF"); // bleu ?
-	line.graphics.moveTo((x1+0.5) * config.pixel.w, (y1+0.5) * config.pixel.h);
-	line.graphics.lineTo((x2+0.5) * config.pixel.w, (y2+0.5) * config.pixel.h);
+	var graph = new createjs.Graphics()
+		.setStrokeStyle(2)
+		.beginStroke("#0000FF")
+		.moveTo((x1+0.5) * config.pixel.w, (y1+0.5) * config.pixel.h)
+		.lineTo((x2+0.5) * config.pixel.w, (y2+0.5) * config.pixel.h);
+	var line = new createjs.Shape(graph);
 	
 	st.addChild(line);
 	return line;

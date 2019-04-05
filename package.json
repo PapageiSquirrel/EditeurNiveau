@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "Level Editor and engine",
   "dependencies": {
-    "mongodb": "2.2.11",
     "fs": "0.0.1-security",
-    "readline": "1.3.0"
+    "mongodb": "2.2.11",
+    "readline": "1.3.0",
+    "socket.io": "^2.1.1"
   },
   "author": "Mael Rabasse",
   "repository": {
@@ -13,6 +14,6 @@
     "url": "git+https://github.com/PapageiSquirrel/EditeurNiveau.git"
   },
   "engines": {
-	"node": "4.6.1"
+    "node": "4.6.1"
   }
 }

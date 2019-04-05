@@ -53,8 +53,8 @@ function createEcranOnCanvas(index) {
 	
 	var obj_e = monde.ecrans[index];
 	ecran = new Ecran(index, obj_e.nom, obj_e.position.x, obj_e.position.y, obj_e.plateformes, obj_e.decors, obj_e.loots, obj_e.ennemis);
-	
-	if (mode == 'edit') loadEcranOnCanvas();
+
+	if (mode == 'edit') { loadEcranOnCanvas(); }
 }
 
 function loadEcranOnCanvas() {
@@ -67,7 +67,7 @@ function loadEcranOnCanvas() {
 	
 	config.item.type.forEach(function(type) {
 		ecran[type+"s"].forEach(function(item) {
-			items_edit[type].push(createItem(ecran.layers[type+"s"], type, item));
+			items_edit[type].push(createItem(stage, type, item));
 		});
 	});
 	
@@ -95,20 +95,6 @@ function loadAdjacentEcranCanvas() {
 			
 			var dir = ecran.isAdjacentTo(e);
 			if (dir) createCanvasOfAdjacentEcran(i, e, dir);
-			/*
-			if (e.position.x !== undefined && e.position.y !== undefined) {
-				// Vérifie si l'écran est adjacent à un autre
-				if (e.position.x == ecran.position.x && e.position.y == ecran.position.y-1) {
-					createCanvasOfAdjacentEcran(i, e, 'haut');
-				} else if (e.position.x == ecran.position.x && e.position.y == ecran.position.y+1) {
-					createCanvasOfAdjacentEcran(i, e, 'bas');
-				} else if (e.position.y == ecran.position.y && e.position.x == ecran.position.x-1) {
-					createCanvasOfAdjacentEcran(i, e, 'gauche');
-				} else if (e.position.y == ecran.position.y && e.position.x == ecran.position.x+1) {
-					createCanvasOfAdjacentEcran(i, e, 'droite');
-				}
-			}
-			*/
 		}
 		
 		for(var prop in ecrans_necessaires) {

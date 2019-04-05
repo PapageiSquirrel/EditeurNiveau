@@ -145,7 +145,7 @@ function addAjustmentVariables(type, prop) {
 			if (var_aju.format == "number" || var_aju.format == "text") {
 				var input = document.createElement("input");
 				input.type = "text";
-				input.id = var_aju.name;
+				input.id = "id_" + var_aju.name;
 				input.name = var_aju.name;
 				input.className = "col-xs-6 nopadding";
 				if (current_item && current_item.param.proprietes && current_item.param.proprietes[prop] && current_item.param.proprietes[prop][var_aju.name]) {
@@ -203,11 +203,10 @@ function addAjustmentVariables(type, prop) {
 		});
 	}
 	
-	if (!prop_info.representation) {
+	if (!prop_info.representation && document.getElementById("btnVarAju")) {
 		div.removeChild(document.getElementById("btnVarAju"));
-		createItemProp(type, prop);
+		current_item.param.proprietes[prop] = createItemProp(type, prop);
 	}
-	
 }
 
 function createAjustmentVariables(type, prop) {
@@ -319,7 +318,6 @@ function createItem(st, type, param, withProp=true) {
 	
 	current_item = created_item;
 	
-	// TODO : Créer les propriétés de l'objet
 	if (withProp && param.proprietes) {
 		for (prop in param.proprietes) {
 			for (va in param.proprietes[prop]) {
@@ -423,13 +421,12 @@ function editItemProp(prop, name, format, value) {
 	if (current_item && current_item.param.proprietes && current_item.param.proprietes[prop] && !current_item.param.proprietes[prop][name]) {
 		current_item.param.proprietes[prop][name] = null;
 	}
-	
+
 	if (current_item && current_item.param.proprietes && current_item.param.proprietes[prop] && value) {
 		var prop_sauve = current_item.param.proprietes[prop];
-		
 		if (format == "text") {
 			prop_sauve[name] = value;
-			if (prop_sauve.representation.obj) prop_sauve.representation.obj.text = value;
+			if (prop_sauve.representation && prop_sauve.representation.obj) prop_sauve.representation.obj.text = value;
 			stage.update();
 		}
 		if (format == "number")	prop_sauve[name] = Number(value);
@@ -442,10 +439,8 @@ function editItemProp(prop, name, format, value) {
 }
 
 function drawItem(st, type, x, y, w, h, couleur, id_sprite) {
-	var pf;
+	var pf = new createjs.Container();
 	if (id_sprite) {
-		pf = new createjs.Container();
-		
 		var s = sprites[type][id_sprite];
 		
 		var sprite;
@@ -488,8 +483,9 @@ function drawItem(st, type, x, y, w, h, couleur, id_sprite) {
 	} else {
 		//var graph = new createjs.Graphics().beginLinearGradientFill(["#FFFFFF", config.palette[couleur.base][couleur.nuance]], [0, 0.1], 0, y * config.pixel.h, 0, (y + h) * config.pixel.h).drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
 		var graph = new createjs.Graphics().beginFill(config.palette[couleur.base][couleur.nuance]).drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
-		pf = new createjs.Shape(graph);
-		pf.setBounds(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
+		var sub_pf = new createjs.Shape(graph);
+		sub_pf.setBounds(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
+		pf.addChild(sub_pf);
 	}
 	
 	if (mode == "game" && (type == "decor" || type == "loot")) st.addChildAt(pf, 0);
@@ -497,66 +493,10 @@ function drawItem(st, type, x, y, w, h, couleur, id_sprite) {
 	return pf;
 }
 
-/*
-function createLoot(st, x, y , w, h, couleur, id_sprite) {
-	var loot;
-	
-	if (id_sprite) {
-		var s = sprites['loot'][id_sprite];
-		var ss = new createjs.SpriteSheet({
-			frames: {width: s.naturalWidth, height: s.naturalHeight},
-			images: [preload.getResult(s.id)]
-		});
-		
-		var rgb = getRGB(config.palette[couleur.base][couleur.nuance]);
-		var f = new createjs.ColorFilter(0, 0, 0, 1, rgb[0], rgb[1], rgb[2], 0);
-		
-		loot = new createjs.Sprite(ss);
-		loot.filters = [f];
-		loot.setTransform(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w / s.naturalWidth, h * config.pixel.h / s.naturalHeight);
-		var loot_img = loot.clone();
-		loot.cache(0, 0, s.naturalWidth, s.naturalHeight);
-	} else {
-		var graph = new createjs.Graphics().beginLinearGradientFill(["#FFFFFF", config.palette[couleur.base][couleur.nuance]], [0, 0.1], 0, y * config.pixel.h, 0, (y + h) * config.pixel.h).drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
-		loot = new createjs.Shape(graph);
-	}
-	
-	st.addChild(loot);
-	return loot;
-}
-
-function createDecor(st, x, y , w, h, couleur, id_sprite) {
-	var decor;
-	
-	if (id_sprite) {
-		var s = sprites['decor'][id_sprite];
-		var ss = new createjs.SpriteSheet({
-			frames: {width: s.naturalWidth, height: s.naturalHeight},
-			images: [preload.getResult(s.id)]
-		});
-		
-		var rgb = getRGB(config.palette[couleur.base][couleur.nuance]);
-		var f = new createjs.ColorFilter(0, 0, 0, 1, rgb[0], rgb[1], rgb[2], 0);
-		
-		decor = new createjs.Sprite(ss);
-		decor.filters = [f];
-		decor.setTransform(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w / s.naturalWidth, h * config.pixel.h / s.naturalHeight);
-		var decor_img = decor.clone();
-		decor.cache(0, 0, s.naturalWidth, s.naturalHeight);
-	} else {
-		var graph = new createjs.Graphics().beginLinearGradientFill(["#FFFFFF", config.palette[couleur.base][couleur.nuance]], [0, 0.5], 0, y * config.pixel.h, 0, (y + h) * config.pixel.h).drawRect(x * config.pixel.w, y * config.pixel.h, w * config.pixel.w, h * config.pixel.h);
-	
-		decor = new createjs.Shape(graph);
-	}
-	
-	st.addChild(decor);
-	return decor;
-}
-*/
-
 function deleteItem(type, item) {
 	if (item) {
-		stage.removeChild(item.obj);
+		item.obj.removeAllChildren();
+		//stage.removeChild(item.obj);
 		
 		if (mode == 'edit') {
 			for(var i = items_edit[type].length-1; i >= 0 ; i--) { 
@@ -581,7 +521,6 @@ function deleteItemProp(item, prop) {
 					console.log(e);
 					console.log(item);
 				}
-				
 			}
 		}
 		

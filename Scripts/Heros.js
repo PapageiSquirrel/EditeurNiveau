@@ -24,12 +24,16 @@ function Heros(f=forme.Rond) {
 	this.nuancier_saut = 0;
 	this.hold_special = null;
 	
-	this.vitesse_saut = config.vitesse.saut;
+	this.vitesse_saut = { 'rond': config.vitesse.saut, 'carre': config.vitesse.saut*0.8, 'triangle': config.vitesse.saut*1.5 };
 	
 	this.heros_shape = new createjs.Shape();
 	this.heros_animation = new createjs.Container();
+
+	this.formes = {'rond': true, 'carre': false, 'triangle': false};
+	this.pouvoirs = {'rond': false, 'carre': false, 'triangle': false};
 	
 	this.collision = {};
+	this.keep_colliding = null;
 }
 
 Heros.prototype.start = function(x=undefined, y=undefined) {
@@ -67,10 +71,23 @@ Heros.prototype.isRespawning = function() {
 	return moteur.frameCounters['death'].actif;
 }
 
+Heros.prototype.isGettingPowerup = function() {
+	return moteur.frameCounters['powerup'].actif;
+}
+
 Heros.prototype.canShift = function() {
-	if (!this.isShifting() && this.inertie == 0 && this.collision[direction.Bas]) {
+	if (this.hasMoreThanOneShape() && !this.isShifting() && this.inertie == 0 && this.collision[direction.Bas]) {
 		return true;
 	}
+}
+
+Heros.prototype.addPowerup = function(pu) {
+	if (pu.cle == "forme") this.formes[pu.valeur] = true;
+	else if (pu.cle == "pouvoir") this.pouvoirs[pu.valeur] = true;
+}
+
+Heros.prototype.hasMoreThanOneShape = function() {
+	return this.formes[forme.Triangle] || this.formes[forme.Carre];
 }
 
 Heros.prototype.isShifting = function() {
@@ -89,16 +106,24 @@ Heros.prototype.setSwitchDir = function(dir) {
 
 Heros.prototype.isOutOfBounds = function() {
 	var b = ecran.getBounds();
-	
-	if (this.shape.x > b.droite) { 
+	var oob_dir = null;
+
+	if (this.shape.x > b.droite) {
+		oob_dir = direction.Gauche;
 		this.setSwitchDir(direction.Droite);
 	} else if (this.shape.x < b.gauche) { 
+		oob_dir = direction.Droite;
 		this.setSwitchDir(direction.Gauche);
 	} else if (this.shape.y > b.bas) {
+		oob_dir = direction.Haut;
 		this.setSwitchDir(direction.Bas);
 	} else if (this.shape.y < b.haut) { 
+		oob_dir = direction.Bas;
 		this.setSwitchDir(direction.Haut);
 	}
+
+	if (oob_dir) this.keep_colliding = this.collision[oob_dir];
+
 	return this.isSwitching();
 }
 
@@ -125,7 +150,7 @@ Heros.prototype.move = function(dir, t) {
 	var new_pos = {x: this.shape.x, y: this.shape.y};
 	switch(dir) {
 		case direction.Haut:
-			new_pos.y -= (moteur.timeSpent(t) * this.vitesse_saut) * (1-this.ralentissement);
+			new_pos.y -= (moteur.timeSpent(t) * this.vitesse_saut[this.forme]) * (1-this.ralentissement);
 			break;
 		case direction.Bas:
 			new_pos.y += (moteur.timeSpent(t) * config.vitesse.chute) * (Math.pow(this.fallAcceleration, 2));
@@ -224,8 +249,12 @@ Heros.prototype.isFalling = function() {
 	}
 }
 
+Heros.prototype.hasSpecial = function() {
+	return this.pouvoirs[this.forme];
+}
+
 Heros.prototype.canSpecial = function() {
-	if (!this.isShifting() && !this.isSwitching() && !this.isUsingSpecial()) {
+	if (this.hasSpecial() && !this.isShifting() && !this.isSwitching() && !this.isUsingSpecial()) {
 		switch(this.forme) {
 			case forme.Carre:
 				if (!this.collision[direction.Bas] || this.isJumping()) {
@@ -290,10 +319,13 @@ Heros.prototype.nextShape = function() {
 			this.forme = forme.Rond;
 			break;
 		case forme.Rond:
-			this.forme = forme.Triangle;
+			if (this.formes[forme.Triangle]) this.forme = forme.Triangle;
+			else if (this.formes[forme.Carre]) this.forme = forme.Carre;
+			else this.forme = forme.Rond;
 			break;
 		case forme.Triangle:
-			this.forme = forme.Carre;
+			if (this.formes[forme.Carre]) this.forme = forme.Carre;
+			else this.forme = forme.Rond;
 			break;
 	}
 }
@@ -369,7 +401,7 @@ Heros.prototype.shapeAnimation = function(action, step, frame_number=1, frame_to
 				break;
 			case forme.Triangle:
 				if (step == "prepare") {
-					this.heros_shape.scaleY = config.vitesse.saut / this.vitesse_saut;
+					this.heros_shape.scaleY = config.vitesse.saut / this.vitesse_saut[this.forme];
 				} else if (step == "ready") {
 					/*
 					s1 = new createjs.Shape();
@@ -409,6 +441,8 @@ Heros.prototype.shapeAnimation = function(action, step, frame_number=1, frame_to
 				this.heros_shape.rotation = 0;
 				break;
 		}
+	} else if (action == "powerup") {
+		
 	} else if (action == "die") {
 		switch(step) {
 			case "start":

@@ -49,9 +49,11 @@ function loadWorld(param_nom=undefined) {
 		nom = param_nom;
 	}
 	
-	if (nom) {
+	if (nom && !monde) {
 		preload.loadFile({id: "monde", src: "JSON/" + nom + ".json"});
 		preload.on("complete", handlePreloadWorldComplete, this);
+	} else {
+		handlePreloadWorldComplete();
 	}
 }
 
@@ -73,7 +75,7 @@ function createWorldOnCanvas() {
 		} else if (mode == 'game') {
 			// TODO: charger l'écran dont la position est sauvegardé, sinon default (0)
 			items_game = loadWorldOnCanvas();
-			
+
 			var obj_e = monde.ecrans[0];
 			ecran = new Ecran(0, obj_e.nom, obj_e.position.x, obj_e.position.y, obj_e.plateformes, obj_e.decors, obj_e.loots, obj_e.ennemis);
 		}
@@ -88,7 +90,6 @@ function showWorld() {
 	if (index_ecran_sauve != -1) {
 		document.getElementById("btnShowWorld").innerHTML = "Afficher";
 		
-		clearCanvas();
 		createEcranOnCanvas(index_ecran_sauve);
 		index_ecran_sauve = -1;
 		
@@ -99,15 +100,14 @@ function showWorld() {
 	} else if (monde) {
 		document.getElementById("btnShowWorld").innerHTML = "Retour";
 		
-		ecran.save();
+		ecran.save(items_edit);
 		index_ecran_sauve = monde.ecrans.indexOf(ecran);
-		
-		stage.removeChild(grid);
 		
 		clearCanvas();
 		clearAdjacentCanvas();
 		
-		items_all_edit = loadWorldOnCanvas();
+		//items_all_edit = loadWorldOnCanvas(); ??
+		loadWorldOnCanvas();
 		
 		stage.update();
 	}
@@ -133,17 +133,16 @@ function loadWorldOnCanvas() {
 		document.getElementById("path").innerHTML = monde.nom + " > Tous les ecrans";
 	}
 	
-	monde.ecrans.forEach(function(e) {
-		if (e.position.x != undefined && e.position.y != undefined) {
-			e.position.x -= lim_x.min;
-			e.position.y -= lim_y.min;
-			
-			items_return[e.nom] = {};
-			config.item.type.forEach(function(type) {
-				var container = new createjs.Container();
-				stage.addChild(container);
-				
-				items_return[e.nom][type] = [];
+	config.item.type.forEach(function(type) {
+		var container = new createjs.Container();
+		stage.addChild(container);
+		monde.ecrans.forEach(function(e) {
+			if (!items_return[e.nom]) items_return[e.nom] = {};
+			if (e.position.x != undefined && e.position.y != undefined) {
+				e.position.x -= lim_x.min;
+				e.position.y -= lim_y.min;
+
+				if (!items_return[e.nom][type]) items_return[e.nom][type] = [];
 				if (e[type+"s"] !== undefined) {
 					e[type+"s"].forEach(function(item) {
 						var new_param = {
@@ -165,8 +164,8 @@ function loadWorldOnCanvas() {
 						}
 					});
 				}
-			});
-		}
+			}
+		});
 	});
 	
 	return items_return;

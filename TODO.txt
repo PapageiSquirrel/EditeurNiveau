@@ -1,0 +1,31 @@
+TODO List
+--------------------
+
+THE GAME
+--------------------
+[-] Bug fixing on the game
+	[X] Apply layers to the game
+		=> Config order is what matters (but moving images should be upper)
+	[-] Red Blocks doesn't disappear when destroyed
+		=> check animations
+	[-] Red power go through walls when used too early
+		=> add a timer to avoid that problem
+	[-] Music doesn't loop and transition in shifting not subtle enough
+		=> Do Loop
+		=> Lower the sound for a smoother transition 
+[-] Conception (maybe) problems
+	[-] No limit even when no screen (and no scrolling)
+[-] In progress (but not now)
+	[-] Object Rotation
+---------------------
+
+THE EDITOR
+---------------------
+[X] Bug fixing on the editor
+	[X] When changing screens, the objects of the previous one doesn't disappear
+		=> add removeAllChildren to ClearCanvas() (Systemize ?)
+	[X] World View isn't working
+	[X] Fixing the saving fonction
+		=> the layers properties needed to be set to undefined
+	[-] Delete destroy the object, but not the image of it
+---------------------

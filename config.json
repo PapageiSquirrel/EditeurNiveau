@@ -1,12 +1,12 @@
 {
 	"depart": 
 	{
-		"monde": "Tutorial1",
-		"ecran": "Tuto_Ecran1",
+		"monde": "Demo",
+		"ecran": "Choix",
 		"pt": 
 		{
-			"x": 100,
-			"y": 450
+			"x": 300,
+			"y": 300
 		}
 	},
 	"taille": 
@@ -44,6 +44,7 @@
 		"shift": 60,
 		"switch": 60,
 		"death": 60,
+		"powerup": 30,
 		"use": 30,
 		"activate": 30
 	},
@@ -51,9 +52,9 @@
 	{
 		"type": 
 		[
+			"decor",
 			"plateforme", 
 			"loot", 
-			"decor",
 			"ennemi"
 		],
 		"proprietes": 
@@ -87,9 +88,14 @@
 						{"name": "activation", "format": "boolean", "options": ["instant", "delayed", "triggered"]}
 					]
 				}, 
-				"ramassable": {"representation": false, "img": "Ramassable.png"}, 
+				"ramassable": {"representation": false, "img": "Ramassable.png",
+					"configurable": [
+						{"name": "cle", "format": "text", "defaut": ""},
+						{"name": "valeur", "format": "text", "defaut": ""}
+					]
+				}, 
 				"utilisable": {"representation": false, "img": "Utilisable.png"},
-				"sauve": {"representation": true, "img": "Sauve.png"}
+				"sauve": {"representation": true, "img": "Checkpoint.png"}
 			},
 			"decor": 
 			{

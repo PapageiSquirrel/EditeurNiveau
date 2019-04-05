@@ -24,7 +24,6 @@ function init() {
 	
 	loadUI(function(manifest) {
 		preload.loadManifest(manifest);
-		console.log(manifest);
 		
 		if (sprites != {} && musics != {}) preload.on("complete", handlePreload, this);
 	});
@@ -96,8 +95,9 @@ function clearCanvas() {
 				deleteItem(type, items_all_edit[type][i]);
 			}
 		});
-		
+
 		stage.removeChild(grid);
+		stage.removeAllChildren();
 		stage.update();
 	}
 }

@@ -6,6 +6,7 @@ function MoteurPhysique(stage, heros) {
 	this.initFC();
 	
 	this.save_position = { 'monde': config.depart.monde, 'ecran': undefined, 'x': undefined, 'y': undefined };
+	this.save_pu = {};
 }
 
 MoteurPhysique.prototype.start = function(x=undefined, y=undefined) {
@@ -20,6 +21,10 @@ MoteurPhysique.prototype.start = function(x=undefined, y=undefined) {
 	}
 }
 
+MoteurPhysique.prototype.end = function() {
+	menu.open(menuMode.GameOver);
+}
+
 MoteurPhysique.prototype.save = function() {
 	this.save_position.ecran = ecran;
 	this.save_position.x = ecran.position.x;
@@ -29,6 +34,9 @@ MoteurPhysique.prototype.save = function() {
 MoteurPhysique.prototype.initFC = function() {
 	this.frameCounters['switch'] = new FrameCounter(config.recovery['switch']);
 	this.frameCounters['death'] = new FrameCounter(config.recovery['death']);
+	this.frameCounters['powerup'] = new FrameCounter(config.recovery['powerup'], function() {
+		heros.addPowerup(moteur.save_pu.param.proprietes['ramassable']);
+	});
 	this.frameCounters['wait_jump'] = new FrameCounter(config.recovery['wait_jump']);
 	this.frameCounters['shift'] = new FrameCounter(config.recovery['shift'], function() {
 		heros.nextShape();
@@ -61,6 +69,25 @@ MoteurPhysique.prototype.animateDeath = function() {
 		
 		this.heros.shapeAnimation('die', 'end');
 		
+		fc.reset();
+	}
+}
+
+MoteurPhysique.prototype.animatePowerup = function() {
+	var fc = this.frameCounters['powerup'];
+	fc.increment();
+	
+	var pu_obj = this.save_pu.obj;
+	pu_obj.alpha *= 0.9;
+	
+	if (fc.isLastFrame()) {
+		// SAVE PROGRESS ??
+		
+		this.heros.shapeAnimation('powerup', 'end');
+		var layer = this.stage.getChildAt(2);
+		layer.removeChild(this.save_pu.obj);
+		deleteItem('loot', this.save_pu);
+		this.save_pu = {};
 		fc.reset();
 	}
 }
@@ -129,46 +156,48 @@ MoteurPhysique.prototype.waitJump = function() {
 MoteurPhysique.prototype.initTriggers = function() {
 	var m = this;
 	
-	items_game[ecran.nom]['plateforme'].forEach(function(item) {
-		if (item.param.proprietes) {
-			for (p_name in item.param.proprietes) {
-				if (item.param.proprietes[p_name].trigger) {
-					if (item.param.proprietes[p_name].trigger.length > 0) {
-						var trigger_array = [];
-						for (var i=0 ; i < item.param.proprietes[p_name].trigger.length ; i++) {
-							trigger_array.push({'name': item.param.proprietes[p_name].trigger[i], 'value': false});
+	monde.ecrans.forEach(function(e) {
+		items_game[e.nom]['plateforme'].forEach(function(item) {
+			if (item.param.proprietes) {
+				for (p_name in item.param.proprietes) {
+					if (item.param.proprietes[p_name].trigger) {
+						if (item.param.proprietes[p_name].trigger.length > 0) {
+							var trigger_array = [];
+							for (var i=0 ; i < item.param.proprietes[p_name].trigger.length ; i++) {
+								trigger_array.push({'name': item.param.proprietes[p_name].trigger[i], 'value': false});
+							}
+							item.param.proprietes[p_name].trigger = trigger_array;
 						}
-						item.param.proprietes[p_name].trigger = trigger_array;
 					}
 				}
 			}
-		}
-	});
-	
-	items_game[ecran.nom]['loot'].forEach(function(item) {
-		if (item.param.proprietes) {
-			for (p_name in item.param.proprietes) {
-				if (item.param.proprietes[p_name].trigger) {
-					if (item.param.proprietes[p_name].trigger.length > 0) {
-						var trigger_array = [];
-						for (var i=0 ; i < item.param.proprietes[p_name].trigger.length ; i++) {
-							trigger_array.push({'name': item.param.proprietes[p_name].trigger[i], 'value': false});
+		});
+		
+		items_game[e.nom]['loot'].forEach(function(item) {
+			if (item.param.proprietes) {
+				for (p_name in item.param.proprietes) {
+					if (item.param.proprietes[p_name].trigger) {
+						if (item.param.proprietes[p_name].trigger.length > 0) {
+							var trigger_array = [];
+							for (var i=0 ; i < item.param.proprietes[p_name].trigger.length ; i++) {
+								trigger_array.push({'name': item.param.proprietes[p_name].trigger[i], 'value': false});
+							}
+							item.param.proprietes[p_name].trigger = trigger_array;
 						}
-						item.param.proprietes[p_name].trigger = trigger_array;
 					}
 				}
 			}
-		}
+		});
 	});
 }
 
-MoteurPhysique.prototype.checkTriggers = function(item, trigger) {
+MoteurPhysique.prototype.checkTriggers = function(item, trigger, dir) {
 	if (item.param.proprietes) {
 		for (p_name in item.param.proprietes) {
 			if (item.param.proprietes[p_name].trigger) {
 				if (item.param.proprietes[p_name].trigger.length > 0) {
 					item.param.proprietes[p_name].trigger.some(function(trig) {
-						if (trig.name == trigger) {
+						if (trig.name == trigger && dir == direction.Bas) {
 							trig.value = true;
 							return true;
 						}
@@ -202,23 +231,25 @@ MoteurPhysique.prototype.initItemsLinks = function() {
 MoteurPhysique.prototype.execItemsProperties = function() {
 	var m = this;
 	
-	items_game[ecran.nom]['plateforme'].forEach(function(item) {
-		if (item.param.proprietes) {
-			for (p_name in item.param.proprietes) {
-				if (item.param.proprietes[p_name].trigger && item.param.proprietes[p_name].trigger.length >= 0 && item.param.proprietes[p_name].trigger.some(function (t) { return !t.value; })) {
-					//if (p_name == "rotation") console.log(item.param.proprietes[p_name].trigger);
-				} else {
-					switch(p_name) {
-						case 'mouvement':
-							m.execPFMouvement(item, item.param.proprietes[p_name]);
-							break;
-						case 'rotation':
-							m.execPFRotation(item, item.param.proprietes[p_name]);
-							break;
+	monde.ecrans.forEach(function(e) {
+		items_game[e.nom]['plateforme'].forEach(function(item) {
+			if (item.param.proprietes) {
+				for (p_name in item.param.proprietes) {
+					if (item.param.proprietes[p_name].trigger && item.param.proprietes[p_name].trigger.length >= 0 && item.param.proprietes[p_name].trigger.some(function (t) { return !t.value; })) {
+						//if (p_name == "rotation") console.log(item.param.proprietes[p_name].trigger);
+					} else {
+						switch(p_name) {
+							case 'mouvement':
+								m.execPFMouvement(item, e, item.param.proprietes[p_name]);
+								break;
+							case 'rotation':
+								m.execPFRotation(item, e, item.param.proprietes[p_name]);
+								break;
+						}
 					}
 				}
 			}
-		}
+		});
 	});
 	
 	monde.ecrans.forEach(function(e) {
@@ -240,7 +271,7 @@ MoteurPhysique.prototype.execItemsProperties = function() {
 	});
 }
 
-MoteurPhysique.prototype.execPFMouvement = function(item, param_prop) {
+MoteurPhysique.prototype.execPFMouvement = function(item, e, param_prop) {
 	var coeff_directeur = undefined;
 	var delta_x = param_prop.representation.x2 - param_prop.representation.x1;
 	var delta_y = param_prop.representation.y2 - param_prop.representation.y1;
@@ -308,10 +339,10 @@ MoteurPhysique.prototype.execPFMouvement = function(item, param_prop) {
 	
 	var bornes_x = {inf: 0, sup: 0};
 	var bornes_y = {inf: 0, sup: 0};
-	if (delta_x > 0) { bornes_x.inf = param_prop.representation.x1 + ecran.position.x * config.taille.w; bornes_x.sup = param_prop.representation.x2 + ecran.position.x * config.taille.w; }
-	else if (delta_x < 0) { bornes_x.inf = param_prop.representation.x2 + ecran.position.x * config.taille.w; bornes_x.sup = param_prop.representation.x1 + ecran.position.x * config.taille.w; }
-	if (delta_y > 0) { bornes_y.inf = param_prop.representation.y1 + ecran.position.y * config.taille.h; bornes_y.sup = param_prop.representation.y2 + ecran.position.y * config.taille.h; }
-	else if (delta_y < 0) { bornes_y.inf = param_prop.representation.y2 + ecran.position.y * config.taille.h; bornes_y.sup = param_prop.representation.y1 + ecran.position.y * config.taille.h; }
+	if (delta_x > 0) { bornes_x.inf = param_prop.representation.x1 + e.position.x * config.taille.w; bornes_x.sup = param_prop.representation.x2 + e.position.x * config.taille.w; }
+	else if (delta_x < 0) { bornes_x.inf = param_prop.representation.x2 + e.position.x * config.taille.w; bornes_x.sup = param_prop.representation.x1 + e.position.x * config.taille.w; }
+	if (delta_y > 0) { bornes_y.inf = param_prop.representation.y1 + e.position.y * config.taille.h; bornes_y.sup = param_prop.representation.y2 + e.position.y * config.taille.h; }
+	else if (delta_y < 0) { bornes_y.inf = param_prop.representation.y2 + e.position.y * config.taille.h; bornes_y.sup = param_prop.representation.y1 + e.position.y * config.taille.h; }
 	
 	var bounds = item.obj.getBounds().clone();
 	var t_bounds = item.obj.getTransformedBounds();
@@ -340,8 +371,16 @@ MoteurPhysique.prototype.execImgDefilement = function(item, param_prop) {
 MoteurPhysique.prototype.checkCollision = function(obj_obs, pts, dir, onlyObj=true) {
 	var res;
 	res = this.checkCollisionByType(obj_obs, pts, dir, onlyObj, 'ennemi');
-	if (res) this.activate('death');
-	
+	if (res && this.heros.forme != forme.Carre && !this.frameCounters['shift'].actif) this.activate('death');
+	else if (res && (this.heros.forme == forme.Carre || this.frameCounters['shift'].actif)) return res;
+
+	res = this.checkCollisionByType(obj_obs, pts, dir, false, 'loot');
+	if (res && res.param.proprietes['ramassable'] && res.param.proprietes['ramassable'].cle == "fin") this.end();
+	else if (res && res.param.proprietes['ramassable']) { 
+		this.save_pu = res;
+		this.activate('powerup'); 
+	}
+
 	res = this.checkCollisionByType(obj_obs, pts, dir, onlyObj, 'plateforme');
 	return res;
 }
@@ -349,7 +388,7 @@ MoteurPhysique.prototype.checkCollision = function(obj_obs, pts, dir, onlyObj=tr
 MoteurPhysique.prototype.checkCollisionByType = function (obj_obs, pts, dir, onlyObj, type) {
 	var m = this;
 	var res;
-	
+
 	items_game[ecran.nom][type].forEach(function(item) {
 		var obj = item.obj;
 		if (obj) {
@@ -379,7 +418,7 @@ MoteurPhysique.prototype.checkCollisionByType = function (obj_obs, pts, dir, onl
 						if (compteur >= 10) {
 							if (onlyObj) res = obj;
 							else res = item;
-							m.checkTriggers(item, 'collision');
+							m.checkTriggers(item, 'collision', dir);
 						}
 					}
 				} else {
@@ -388,13 +427,51 @@ MoteurPhysique.prototype.checkCollisionByType = function (obj_obs, pts, dir, onl
 							
 						if (onlyObj) res = obj;
 						else res = item;
-						m.checkTriggers(item, 'collision');
+						m.checkTriggers(item, 'collision', dir);
 					}
 				}
 			}
 		}
 	});
 	
+	if (type == 'plateforme') {
+		var obj_kc = this.heros.keep_colliding;
+		if (obj_kc) {
+			var obj_kc_bounds = obj_kc.getTransformedBounds();
+			if (pts.constructor === Array) {
+				var verif = pts.some(function(pt) {
+					if (obj_obs.x + pt.x >= obj_kc_bounds.x && obj_obs.x + pt.x <= obj_kc_bounds.x + obj_kc_bounds.width && 
+						obj_obs.y + pt.y >= obj_kc_bounds.y && obj_obs.y + pt.y <= obj_kc_bounds.y + obj_kc_bounds.height) {
+						return true;
+					}
+				});
+				
+				if (verif) {
+					var compteur = 0;
+					for (var x = pts[0].x ; x <= pts[1].x ; x++) {
+						for (var y = pts[0].y ; y <= pts[1].y ; y++) {
+							if (obj_obs.x + x >= obj_kc_bounds.x && obj_obs.x + x <= obj_kc_bounds.x + obj_kc_bounds.width && 
+								obj_obs.y + y >= obj_kc_bounds.y && obj_obs.y + y <= obj_kc_bounds.y + obj_kc_bounds.height) {
+								
+								compteur++;
+							}
+						}
+					}
+					
+					if (compteur >= 10) {
+						res = obj_kc;
+					}
+				}
+			} else {
+				if (obj_obs.x + pts.x >= obj_kc_bounds.x && obj_obs.x + pts.x <= obj_kc_bounds.x + obj_kc_bounds.width && 
+					obj_obs.y + pts.y >= obj_kc_bounds.y && obj_obs.y + pts.y <= obj_kc_bounds.y + obj_kc_bounds.height) {
+						
+					res = obj_kc;
+				}
+			}
+		}
+	}
+
 	return res;
 }
 
@@ -440,81 +517,85 @@ MoteurPhysique.prototype.animateSpecial = function(t) {
 	var fc = this.frameCounters['special'];
 	fc.increment();
 	
-	if (this.heros.forme == "carre") {
-		if (fc.counter <= 15) {
-			this.heros.shapeAnimation("special", "prepare");
-		} else {
-			this.heros.fallAcceleration = 3;
-			this.heros.move(direction.Bas, t);
-			this.heros.shapeAnimation("special", "go");
-			var item_coll = this.checkCollision(this.heros.shape, this.heros.pts_coll[this.heros.forme][direction.Bas], direction.Bas, false);
-			
-			if (item_coll) {
-				this.heros.collision[direction.Bas] = item_coll.obj;
-				this.heros.fallAcceleration = 0;
-				
-				if (item_coll.param.proprietes && item_coll.param.proprietes.destructible) {
-					try {
-						deleteItem("plateforme", item_coll);
-					} catch(e) {
-						console.log(e);
-					}
-				}
-				fc.reset();
-				this.heros.adjustPosition(direction.Bas);
-			}
-		}
-	} else if (this.heros.forme == "rond") {
-		if (this.heros.hold_special != null) {
-			if (this.heros.hold_special == 0) {
-				//this.heros.inertie = 0;
-			} else if (this.heros.hold_special == 1 && this.heros.inertie < 40) {
-				this.heros.inertie += 2;
+	if (this.heros.pouvoirs[this.heros.forme]) {
+		if (this.heros.forme == "carre") {
+			if (fc.counter <= 15) {
 				this.heros.shapeAnimation("special", "prepare");
-			} else if (this.heros.hold_special == -1 && this.heros.inertie > -40) {
-				this.heros.inertie -= 2;
-				this.heros.shapeAnimation("special", "prepare");
-			}
-		} else {
-			if (heros.inertie < 0) {
-				heros.move(direction.Gauche, t);
-				this.heros.collision[direction.Droite] = undefined;
-			} else if (heros.inertie > 0) {
-				heros.move(direction.Droite, t);
-				this.heros.collision[direction.Gauche] = undefined;
-			}
-			
-			if (this.heros.inertie > 0) this.heros.inertie--;
-			else this.heros.inertie++;
-			
-			this.heros.shapeAnimation("special", "go");
-			
-			if (this.heros.inertie < 1 && this.heros.inertie > -1) this.heros.inertie = 0;
-			
-			if (this.heros.inertie == 0 || this.heros.collision[direction.Gauche] || this.heros.collision[direction.Droite]) {
-				this.heros.inertie = 0
-				this.heros.shapeAnimation("special", "stop");
-				fc.reset();
-			}
-		}
-	} else if (this.heros.forme == "triangle") {
-		if (this.heros.hold_special != null) {
-			if (this.heros.vitesse_saut < 16) {
-				this.heros.shapeAnimation("special", "prepare");
-				this.heros.vitesse_saut += 0.25;
 			} else {
-				this.heros.shapeAnimation("special", "ready");
+				this.heros.fallAcceleration = 3;
+				this.heros.move(direction.Bas, t);
+				this.heros.shapeAnimation("special", "go");
+				var item_coll = this.checkCollision(this.heros.shape, this.heros.pts_coll[this.heros.forme][direction.Bas], direction.Bas, false);
+				
+				if (item_coll) {
+					this.heros.collision[direction.Bas] = item_coll.obj;
+					this.heros.fallAcceleration = 0;
+					
+					if (item_coll.param.proprietes && item_coll.param.proprietes.destructible) {
+						try {
+							var layer = this.stage.getChildAt(1);
+							layer.removeChild(item_coll.obj);
+							deleteItem("plateforme", item_coll);
+						} catch(e) {
+							console.log(e);
+						}
+					}
+					fc.reset();
+					this.heros.adjustPosition(direction.Bas);
+				}
 			}
-		} else {
-			this.heros.move(direction.Haut, t);
-			
-			this.heros.shapeAnimation("special", "go");
-			
-			if (this.heros.vitesse_saut > config.vitesse.saut) this.heros.vitesse_saut -= 1/(this.heros.vitesse_saut - config.vitesse.saut);
-			
-			if (this.heros.vitesse_saut <= config.vitesse.saut) {
-				this.heros.vitesse_saut = config.vitesse.saut;
-				fc.reset();
+		} else if (this.heros.forme == "rond") {
+			if (this.heros.hold_special != null) {
+				if (this.heros.hold_special == 0) {
+					//this.heros.inertie = 0;
+				} else if (this.heros.hold_special == 1 && this.heros.inertie < 40) {
+					this.heros.inertie += 2;
+					this.heros.shapeAnimation("special", "prepare");
+				} else if (this.heros.hold_special == -1 && this.heros.inertie > -40) {
+					this.heros.inertie -= 2;
+					this.heros.shapeAnimation("special", "prepare");
+				}
+			} else {
+				if (heros.inertie < 0) {
+					heros.move(direction.Gauche, t);
+					this.heros.collision[direction.Droite] = undefined;
+				} else if (heros.inertie > 0) {
+					heros.move(direction.Droite, t);
+					this.heros.collision[direction.Gauche] = undefined;
+				}
+				
+				if (this.heros.inertie > 0) this.heros.inertie--;
+				else this.heros.inertie++;
+				
+				this.heros.shapeAnimation("special", "go");
+				
+				if (this.heros.inertie < 1 && this.heros.inertie > -1) this.heros.inertie = 0;
+				
+				if (this.heros.inertie == 0 || this.heros.collision[direction.Gauche] || this.heros.collision[direction.Droite]) {
+					this.heros.inertie = 0
+					this.heros.shapeAnimation("special", "stop");
+					fc.reset();
+				}
+			}
+		} else if (this.heros.forme == "triangle") {
+			if (this.heros.hold_special != null) {
+				if (this.heros.vitesse_saut[this.heros.forme] < 17) {
+					this.heros.shapeAnimation("special", "prepare");
+					this.heros.vitesse_saut[this.heros.forme] += 0.25;
+				} else {
+					this.heros.shapeAnimation("special", "ready");
+				}
+			} else {
+				this.heros.move(direction.Haut, t);
+				
+				this.heros.shapeAnimation("special", "go");
+				
+				if (this.heros.vitesse_saut[this.heros.forme] > config.vitesse.saut) this.heros.vitesse_saut[this.heros.forme] -= 1/(this.heros.vitesse_saut[this.heros.forme] - config.vitesse.saut);
+				
+				if (this.heros.vitesse_saut[this.heros.forme] <= config.vitesse.saut) {
+					this.heros.vitesse_saut[this.heros.forme] = config.vitesse.saut*1.5;
+					fc.reset();
+				}
 			}
 		}
 	}

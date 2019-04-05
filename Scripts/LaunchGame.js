@@ -14,7 +14,7 @@ function initGame() {
 	keyState = {};
 	frames = 0;
 	started = false;
-	current_music = 'TS2';
+	current_music = 'TS3';
 	selected_format = 'ogg';
 	
 	autres = [];
@@ -31,12 +31,18 @@ function initGame() {
 	moteur = new MoteurPhysique(stage, heros);
 	// FIN INIT
 
+	ui = new UI(35, 50);
+	window.addEventListener('keydown', handle_menu);
 	menu.open(menuMode.Start);
-	ui = new UI();
-	menu.startNewGame();
-	// playMusic(selected_format);
-	
-	// loadWorld(config.depart.monde);
+}
+
+function resetGame() {
+	window.removeEventListener('keydown', handle_menu);
+	ticker = createjs.Ticker.removeEventListener("tick", handleTick);
+	stage.removeAllChildren();
+	stage.x = 0;
+	stage.y = 0;
+	initGame();
 }
 
 function initGameHandler() {
@@ -51,10 +57,10 @@ function initGameHandler() {
 	moteur.initTriggers();
 	moteur.initItemsLinks();
 	
-	fpsLabel = new createjs.Text("-- fps", "bold 18px Arial", "#FFF");
-	stage.addChild(fpsLabel);
-	fpsLabel.x = depart_stage.x;
-	fpsLabel.y = depart_stage.y;
+	//fpsLabel = new createjs.Text("-- fps", "bold 18px Arial", "#FFF");
+	//stage.addChild(fpsLabel);
+	//fpsLabel.x = depart_stage.x;
+	//fpsLabel.y = depart_stage.y;
 	
 	createjs.Ticker.timingMode = createjs.Ticker.RAF;
 	ticker = createjs.Ticker.addEventListener("tick", handleTick);
@@ -62,23 +68,28 @@ function initGameHandler() {
 	
 	window.addEventListener('keydown',function(e){
 		keyState[e.keyCode || e.which] = true;
-	},true);    
+	},true);
 	window.addEventListener('keyup',function(e){
 		keyState[e.keyCode || e.which] = false;
 	},true);
 }
 
 function handleTick(event) {
-	fpsLabel.text = Math.round(createjs.Ticker.getMeasuredFPS()) + " fps";
+	//fpsLabel.text = Math.round(createjs.Ticker.getMeasuredFPS()) + " fps";
 	
 	// Menu ouvert
 	if (menu.isOpen) {
-		if (keyState[13]) {
+		/*
+		if (keyState[27]) {
 			menu.close();
 		}
+		*/
 	// Mort du héros	
 	} else if (heros.isRespawning()) {
 		moteur.animateDeath();
+	// Obtention d'un powerup
+	} else if (heros.isGettingPowerup()) {
+		moteur.animatePowerup();
 	// Changement d'écran du héros
 	} else if (heros.isSwitching()) {
 		moteur.animateSwitch();
@@ -100,9 +111,11 @@ function handleTick(event) {
 		}
 		
 		// Si espace alors activation (loot/item/sauvegarde/...)
+		/*
 		if (keyState[32]) {
 			heros.activate();
 		}
+		*/
 		
 		// Gestion des déplacements via l'inertie du héros
 		if (heros.canMove()) {
@@ -172,32 +185,34 @@ function handleTick(event) {
 			if (ecran.isAdjacentTo(e) == heros.getSwitchDir()) {
 				ecran = e;
 				moteur.activate('switch');
-				moteur.initTriggers();
+				//moteur.initTriggers();
 				return true;
 			}
 		});
 		
 		if (!exists) heros.setSwitchDir(undefined);
 	}
-	
-	// MENUING
-	// Annuler Musique
-	if (keyState[8]) {
-		stopMusic();
-	}
-	if (keyState[27] && !menu.isOpen) {
-		menu.open(menuMode.jeu);
-	}
-	
-	// TEST MULTI
-	// sendDataToOthers({ x: heros.shape.x, y: heros.shape.y });
 
 	frames++;
-	// Ajustement de la position du héros pour éviter supperposition
-	/*
-	heros.adjustPosition(direction.Gauche);
-	heros.adjustPosition(direction.Droite);
-	heros.adjustPosition(direction.Bas);
-	*/
 	stage.update(event);
+}
+
+function handle_menu(e) {
+	// MENUING
+	// Fermeture de Menu
+	if (e.keyCode == 27 && menu.isOpen && menu.mode != menuMode.start && menu.mode != menuMode.GameOver) {
+		menu.close();
+	// Ouverture de Menu
+	} else if (e.keyCode == 27 && !menu.isOpen) {
+		menu.open(menuMode.Jeu);
+	} else if (menu.isOpen) {
+		if (e.keyCode == 38) {
+			ui.selectPreviousOption();
+		} else if (e.keyCode == 40) {
+			ui.selectNextOption();
+		} else if (e.keyCode == 13) {
+			menu.selectMenu();
+		}
+	}
+	stage.update();
 }

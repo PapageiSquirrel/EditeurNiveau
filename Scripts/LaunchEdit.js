@@ -36,7 +36,7 @@ function initEditHandler() {
 			if (current_item && current_prop){
 				deleteItemProp(current_item, current_prop);
 				current_item.param.proprietes[current_prop] = null;
-			} else {
+			} else if (current_item) {
 				for (prop in current_item.param.proprietes) {
 					deleteItemProp(current_item, prop);
 					current_item.param.proprietes[prop] = null;

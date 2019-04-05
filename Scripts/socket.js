@@ -28,17 +28,38 @@ socket.on('disconnect', function(data) {
 });
 
 function sendData(nom, json) {
-	socket.emit('json_data', { 'nom': nom, 'json': json });
+	try {
+		json.ecrans.forEach(function(e) {
+			e.layers = undefined;
+		});
+		socket.emit('json_data', { 'nom': nom, 'json': json });
+	} catch (e) {
+		console.log(e);
+		console.log(json);
+	}
+
 }
 
 function getListFiles(path, callback) {
-	socket.emit('get_files', { 'path': path }, callback);
+	try {
+		socket.emit('get_files', { 'path': path }, callback);
+	} catch (e) {
+		console.log(e);
+	}
 }
 
 function getListFilesInSubdir(path, callback) {
-	socket.emit('get_dirs', { 'path': path }, callback);
+	try {
+		socket.emit('get_dirs', { 'path': path }, callback);
+	} catch (e) {
+		console.log(e);
+	}
 }
 
 function sendDataToOthers(pos) {
-	socket.emit('heros_data', {'location': pos})
+	try {
+		socket.emit('heros_data', {'location': pos});
+	} catch (e) {
+		console.log(e);
+	}
 }

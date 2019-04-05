@@ -1,6 +1,8 @@
 var menuMode = {
 	Start: 'start',
-	Jeu: 'jeu'
+	Jeu: 'jeu',
+	Options: 'options',
+	GameOver: 'gameover'
 }
 
 var mode = {

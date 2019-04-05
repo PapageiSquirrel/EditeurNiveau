@@ -5,6 +5,7 @@ function Ecran(index, nom, pos_x=undefined, pos_y=undefined, pfs=[], decors=[], 
 	this.decors = decors;
 	this.loots = loots;
 	this.ennemis = ennemis;
+	this.ui = ui;
 	this.index = index;
 	
 	this.layers = {	

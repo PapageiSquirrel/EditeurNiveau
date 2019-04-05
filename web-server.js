@@ -46,11 +46,12 @@ listener.sockets.on('connection', function(socket) {
 	client_sockets.push(socket);
 	
 	socket.on('json_data', function(data) {
-		// Write json into file		
+		// Write json into file
 		fs.writeFile('JSON/' + data.nom, JSON.stringify(data.json), function (err) {
-			if (err) return console.log(err);
-			socket.emit('message', 'data saved !');
+			if (err) socket.emit('message', 'data not saved : ' + err);
+			else socket.emit('message', 'data saved !');
 		});
+		
 		// Then emit answer
 	});
 	
